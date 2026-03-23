@@ -1,775 +1,1137 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Line Batch Organizer</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-      margin: 0;
-      padding: 20px;
-      min-height: 100vh;
-      background: linear-gradient(135deg, #6e2dc0, #f44336);
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-    }
-    .container {
-      background: rgba(255, 255, 255, 0.93);
-      backdrop-filter: blur(10px);
-      padding: 30px 40px;
-      border-radius: 20px;
-      max-width: 1300px;
-      width: 100%;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.15);
-    }
-    h2 {
-      font-weight: 300;
-      font-size: 26px;
-      margin-bottom: 6px;
-      text-align: center;
-      color: #333;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Batch Record Verifier</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #13161e;
+    --surface2: #1a1e2a;
+    --border: #252a38;
+    --accent: #00e5ff;
+    --accent2: #7c3aed;
+    --pass: #00e676;
+    --fail: #ff1744;
+    --warn: #ffab00;
+    --text: #e8eaf6;
+    --muted: #5c6380;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
 
-    /* ── MBR lookup bar ── */
-    .mbr-bar {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: linear-gradient(135deg, rgba(110,45,192,0.08), rgba(244,67,54,0.06));
-      border: 1.5px solid #b39ddb;
-      border-radius: 12px;
-      padding: 14px 18px;
-      margin-bottom: 22px;
-      flex-wrap: wrap;
-    }
-    .mbr-bar label {
-      font-size: 13px;
-      font-weight: 600;
-      color: #6e2dc0;
-      white-space: nowrap;
-    }
-    #combinedInput {
-      font-size: 18px;
-      font-weight: 700;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      width: 90px;
-      padding: 8px 12px;
-      border: 2px solid #b39ddb;
-      border-radius: 8px;
-      color: #6e2dc0;
-      text-align: center;
-    }
-    #combinedInput:focus {
-      border-color: #6e2dc0;
-      box-shadow: 0 0 0 3px rgba(110,45,192,0.2);
-      outline: none;
-    }
-    #mbrStatus {
-      font-size: 13px;
-      font-weight: 500;
-      padding: 5px 12px;
-      border-radius: 20px;
-      transition: all 0.2s;
-    }
-    #mbrStatus.found   { background:#e8f5e9; color:#2e7d32; border:1px solid #a5d6a7; }
-    #mbrStatus.notfound{ background:#ffebee; color:#c62828; border:1px solid #ef9a9a; }
-    #mbrStatus.multi   { background:#fff8e1; color:#f57f17; border:1px solid #ffe082; }
-    #mbrStatus.empty   { background:#f3f4f6; color:#9e9e9e; border:1px solid #e0e0e0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* machine chips when multiple options */
-    #machineChips {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-left: 4px;
-    }
-    .machine-chip {
-      padding: 5px 14px;
-      border-radius: 20px;
-      border: 2px solid #b39ddb;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      background: #fff;
-      color: #6e2dc0;
-      transition: all 0.15s;
-    }
-    .machine-chip:hover  { background: #ede7f6; border-color: #6e2dc0; }
-    .machine-chip.active { background: #6e2dc0; color: #fff; border-color: #6e2dc0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
 
-    /* auto-filled field highlight */
-    .autofilled {
-      border: 2px solid #6e2dc0 !important;
-      background: #f3e8ff !important;
-    }
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
 
-    /* ── main form ── */
-    .row {
-      display: flex;
-      gap: 1rem;
-      margin-bottom: 1rem;
-      flex-wrap: wrap;
-    }
-    .field { flex: 1; min-width: 100px; }
-    .field.small { flex: 0 0 150px; }
-    .field label {
-      display: block;
-      margin-bottom: 6px;
-      font-size: 14px;
-      color: #555;
-    }
-    input, select, textarea {
-      padding: 10px 12px;
-      font-size: 15px;
-      width: 100%;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      background: #fff;
-      transition: all 0.2s ease;
-      margin-bottom: 5px;
-      box-sizing: border-box;
-    }
-    input:focus, select:focus, textarea:focus {
-      border-color: #6e2dc0;
-      box-shadow: 0 0 0 3px rgba(110,45,192,0.2);
-      outline: none;
-    }
-    input.invalid, select.invalid, textarea.invalid {
-      border: 2px solid #e53935;
-      background-color: #ffebee;
-    }
-    input.valid, select.valid, textarea.valid {
-      border: 2px solid #43a047;
-      background-color: #e8f5e9;
-    }
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+  }
 
-    /* toggle */
-    .toggle-wrapper {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-top: 4px;
-      flex-wrap: wrap;
-    }
-    .toggle-label { font-size: 14px; color: #555; }
-    .toggle-switch {
-      position: relative;
-      display: inline-block;
-      width: 52px;
-      height: 28px;
-      flex-shrink: 0;
-    }
-    .toggle-switch input { opacity:0; width:0; height:0; margin:0; padding:0; }
-    .toggle-slider {
-      position: absolute;
-      cursor: pointer;
-      top:0; left:0; right:0; bottom:0;
-      background-color: #6e2dc0;
-      border-radius: 28px;
-      transition: background 0.3s;
-    }
-    .toggle-slider:before {
-      content: "";
-      position: absolute;
-      height: 20px; width: 20px;
-      left: 4px; bottom: 4px;
-      background: white;
-      border-radius: 50%;
-      transition: transform 0.3s;
-    }
-    .toggle-switch input:checked + .toggle-slider { background-color: #f44336; }
-    .toggle-switch input:checked + .toggle-slider:before { transform: translateX(24px); }
-    .toggle-badge { font-size:15px; font-weight:700; color:#6e2dc0; min-width:18px; transition: color 0.3s; }
-    .toggle-badge.two { color:#f44336; }
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    margin-bottom: 40px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 24px;
+  }
 
-    /* preview */
-    #previewRow {
-      display: flex;
-      gap: 20px;
-      margin: 20px 0;
-    }
-    #preview {
-      font-weight: 500;
-      font-size: 15px;
-      line-height: 1.7;
-      padding: 20px;
-      background-color: #f4f6fa;
-      border-radius: 10px;
-      color: #333;
-      white-space: pre-wrap;
-      word-break: break-word;
-      flex: 1;
-    }
-    #lotDisplay {
-      font-weight: 600;
-      font-size: 20px;
-      color: #6e2dc0;
-      background-color: #f4f0ff;
-      padding: 20px;
-      border-radius: 10px;
-      text-align: center;
-      cursor: pointer;
-      user-select: none;
-      transition: background 0.2s;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      gap: 6px;
-    }
-    #lotDisplay:hover { background-color: #e9dfff; }
-    #lotDisplaySub {
-      font-size: 12px;
-      font-weight: 400;
-      color: #9e9e9e;
-    }
-    #copyNotice {
-      font-size: 14px;
-      color: green;
-      display: none;
-      margin-top: 4px;
-    }
-    #list {
-      width: 100%;
-      height: 200px;
-      margin-top: 20px;
-      font-family: monospace;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      padding: 10px;
-      background-color: #fafafa;
-      white-space: pre;
-      box-sizing: border-box;
-    }
-    button {
-      padding: 10px 18px;
-      margin: 10px 8px 10px 0;
-      font-size: 15px;
-      font-weight: 500;
-      border: none;
-      border-radius: 8px;
-      color: white;
-      background: linear-gradient(135deg, #6e2dc0, #8a4fff);
-      cursor: pointer;
-      transition: transform 0.15s, background 0.3s, box-shadow 0.3s;
-    }
-    button:hover {
-      transform: translateY(-1px);
-      background: linear-gradient(135deg, #5a24a4, #7533d4);
-    }
-    #reorderButton.active {
-      background: linear-gradient(135deg, #4caf50, #66bb6a);
-      box-shadow: 0 0 10px rgba(76,175,80,0.6);
-    }
-    .readonly-styled {
-      background: #f3e8ff !important;
-      border: 1.5px solid #b39ddb !important;
-      color: #4a148c !important;
-      font-weight: 500;
-    }
-  </style>
+  .logo-mark {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+
+  h1 {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    line-height: 1;
+  }
+
+  h1 span {
+    display: block;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 4px;
+    font-family: var(--mono);
+  }
+
+  /* ── Machine selector ── */
+  .machine-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .machine-bar label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-family: var(--mono);
+    white-space: nowrap;
+  }
+
+  .machine-bar select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    outline: none;
+    flex: 1;
+    transition: border-color 0.2s;
+  }
+
+  .machine-bar select:focus { border-color: var(--accent); }
+
+  /* ── Section cards ── */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 16px;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+
+  .section.active { border-color: var(--accent); }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: var(--border);
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    flex: 1;
+  }
+
+  .section-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: var(--border);
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .section-badge.pass { background: rgba(0,230,118,0.15); color: var(--pass); }
+  .section-badge.fail { background: rgba(255,23,68,0.15); color: var(--fail); }
+  .section-badge.warn { background: rgba(255,171,0,0.15); color: var(--warn); }
+
+  .section-body {
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* ── Field rows ── */
+  .field {
+    display: grid;
+    grid-template-columns: 160px 1fr auto;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .field-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .field input {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 9px 12px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+  }
+
+  .field input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(0,229,255,0.1);
+  }
+
+  .field input.pass { border-color: var(--pass); background: rgba(0,230,118,0.05); }
+  .field input.fail { border-color: var(--fail); background: rgba(255,23,68,0.05); }
+  .field input.warn { border-color: var(--warn); background: rgba(255,171,0,0.05); }
+  .field input[readonly] { cursor: default; opacity: 0.7; }
+
+  .field-status {
+    width: 22px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  /* ── Parsed display ── */
+  .parsed-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px 12px;
+    background: var(--bg);
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    min-height: 42px;
+    align-items: center;
+  }
+
+  .chip {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    display: flex;
+    gap: 5px;
+  }
+
+  .chip .chip-key { color: var(--muted); }
+  .chip .chip-val { color: var(--accent); }
+  .chip.highlight-lot .chip-val { color: var(--pass); }
+  .chip.highlight-exp .chip-val { color: #ff9800; }
+  .chip.mismatch .chip-val { color: var(--fail); }
+  .chip { background: var(--surface2); }
+
+  /* ── Divider with label ── */
+  .sub-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .sub-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── Summary banner ── */
+  #summary {
+    margin-top: 28px;
+    padding: 18px 22px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    display: none;
+  }
+
+  #summary.visible { display: block; }
+
+  .summary-title {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-family: var(--mono);
+    margin-bottom: 12px;
+  }
+
+  .result-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .result-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-family: var(--mono);
+  }
+
+  .result-row .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .result-row.ok .dot { background: var(--pass); }
+  .result-row.err .dot { background: var(--fail); }
+  .result-row.skip .dot { background: var(--muted); }
+
+  .result-row.ok { color: var(--pass); }
+  .result-row.err { color: var(--fail); }
+  .result-row.skip { color: var(--muted); }
+
+  .final-verdict {
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 15px;
+    text-align: center;
+    letter-spacing: 1px;
+    font-family: var(--mono);
+  }
+
+  .final-verdict.pass { background: rgba(0,230,118,0.12); color: var(--pass); border: 1px solid rgba(0,230,118,0.3); }
+  .final-verdict.fail { background: rgba(255,23,68,0.12); color: var(--fail); border: 1px solid rgba(255,23,68,0.3); }
+
+  /* ── Reset button ── */
+  .btn-reset {
+    display: block;
+    margin: 20px auto 0;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 10px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-reset:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── Pouch toggle ── */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 18px 14px;
+  }
+
+  .toggle-row label {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: var(--mono);
+    cursor: pointer;
+    letter-spacing: 1px;
+  }
+
+  .toggle {
+    width: 36px;
+    height: 20px;
+    background: var(--border);
+    border-radius: 10px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+
+  .toggle.on { background: var(--accent2); }
+
+  .toggle::after {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    background: white;
+    border-radius: 50%;
+    top: 3px;
+    left: 3px;
+    transition: left 0.2s;
+  }
+
+  .toggle.on::after { left: 19px; }
+
+  /* responsive */
+  @media (max-width: 600px) {
+    .field { grid-template-columns: 1fr; }
+    .field-label { margin-bottom: -4px; }
+    .field-status { display: none; }
+  }
+</style>
 </head>
 <body>
-<div class="container">
-  <h2>Line Batch Organizer</h2>
+<div class="app">
 
-  <!-- ── MBR LOOKUP ── -->
-  <div class="mbr-bar">
-    <label>🔍 MBR Combined Code:</label>
-    <input type="text" id="combinedInput" maxlength="3" placeholder="FAI" autocomplete="off" spellcheck="false">
-    <span id="mbrStatus" class="empty">Enter 3-letter code</span>
-    <div id="machineChips"></div>
+  <header>
+    <div class="logo-mark">⬡</div>
+    <div>
+      <h1>Batch Record Verifier
+        <span>Label Consistency Check System</span>
+      </h1>
+    </div>
+  </header>
+
+  <!-- Machine + Product selector -->
+  <div class="machine-bar">
+    <label>Machine</label>
+    <select id="machineSelect">
+      <option value="">— Select machine —</option>
+    </select>
+  </div>
+  <div class="machine-bar" id="product-bar" style="display:none">
+    <label>Product</label>
+    <select id="productSelect">
+      <option value="">— Select product —</option>
+    </select>
+  </div>
+  <div id="product-info-bar" style="display:none; margin-bottom:16px; padding:10px 14px; background:var(--surface); border:1px solid var(--border); border-radius:8px; font-family:var(--mono); font-size:12px; flex-wrap:wrap; gap:16px;">
+    <span style="color:var(--muted);">SAP#</span><span id="info-sap" style="color:var(--accent)"></span>
+    <span style="color:var(--muted);">SHELF LIFE</span><span id="info-shelf" style="color:var(--accent)"></span>
+    <span style="color:var(--muted);">LABELS</span><span id="info-labels" style="color:var(--accent)"></span>
+    <span style="color:var(--muted);">POUCH</span><span id="info-pouch-flag" style="color:var(--accent)"></span>
   </div>
 
-  <form id="lotForm" onsubmit="event.preventDefault(); addToList();">
-    <div class="row">
-      <div class="field small">
-        <label for="prefix">Prefix <span style="font-size:11px;color:#9e9e9e">(auto from MBR)</span></label>
-        <input type="text" id="prefix" maxlength="3" placeholder="e.g. FAI" tabindex="1">
-      </div>
+  <!-- ── SECTION 1: Batch Record Front Page ── -->
+  <div class="section" id="sec-batch">
+    <div class="section-header">
+      <div class="section-icon">📋</div>
+      <span class="section-title">Batch Record — Front Page</span>
+      <span class="section-badge" id="badge-batch">PENDING</span>
+    </div>
+    <div class="section-body">
+      <div class="sub-label">Scan barcodes from the front page</div>
+
       <div class="field">
-        <label for="body">Body (auto-filled by calendar)</label>
-        <input type="text" id="body" placeholder="mmddyy1" tabindex="2" readonly>
-        <input type="date" id="calendar">
-        <div class="toggle-wrapper" style="margin-top:8px;">
-          <span class="toggle-label">Batch suffix:</span>
-          <span class="toggle-badge" id="suffixLabel1">1</span>
-          <label class="toggle-switch">
-            <input type="checkbox" id="suffixToggle">
-            <span class="toggle-slider"></span>
-          </label>
-          <span class="toggle-badge two" id="suffixLabel2">2</span>
+        <span class="field-label">Lot Number</span>
+        <input type="text" id="br-lot" placeholder="Scan or type lot barcode…" autocomplete="off" spellcheck="false">
+        <span class="field-status" id="st-br-lot">○</span>
+      </div>
+
+      <div class="field">
+        <span class="field-label">Manufacture Date</span>
+        <input type="text" id="br-mfg" placeholder="Scan manufacture date barcode…" autocomplete="off" spellcheck="false">
+        <span class="field-status" id="st-br-mfg">○</span>
+      </div>
+
+      <div class="field">
+        <span class="field-label">Expiration Date</span>
+        <input type="text" id="br-exp" placeholder="Scan expiration date barcode…" autocomplete="off" spellcheck="false">
+        <span class="field-status" id="st-br-exp">○</span>
+      </div>
+
+      <div class="sub-label" style="margin-top:4px;">Shelf life verification</div>
+      <div id="shelf-life-row" style="display:none">
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border-radius:6px;border:1px solid var(--border);">
+          <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">COMPUTED</span>
+          <span id="shelf-computed" style="font-family:var(--mono);font-size:13px;color:var(--text);">—</span>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">EXPECTED</span>
+          <span id="shelf-expected" style="font-family:var(--mono);font-size:13px;color:var(--text);">—</span>
+          <span id="shelf-verdict" style="font-family:var(--mono);font-size:12px;margin-left:auto;padding:3px 10px;border-radius:4px;"></span>
         </div>
       </div>
-      <div class="field small">
-        <label for="expiration">Exp. (Months)</label>
-        <input type="text" id="expiration" maxlength="3" placeholder="MM" tabindex="3">
-        <button type="button" onclick="convertExpiration()">Convert</button>
-        <input type="text" id="convertedExp" placeholder="YYYY-MM-DD" readonly>
+      <div id="shelf-no-sap" style="display:none;font-family:var(--mono);font-size:11px;color:var(--muted);padding:8px 2px;">
+        ℹ Scan the case label unique QR to enable shelf life check
       </div>
     </div>
+  </div>
 
-    <div class="row">
+  <!-- ── SECTION 2: Case Label ── -->
+  <div class="section" id="sec-case">
+    <div class="section-header">
+      <div class="section-icon">📦</div>
+      <span class="section-title">Case Label</span>
+      <span class="section-badge" id="badge-case">PENDING</span>
+    </div>
+    <div class="section-body">
+      <div class="sub-label">QR 1 — Website launcher</div>
       <div class="field">
-        <label for="machine">Machine</label>
-        <select id="machine" tabindex="4">
-          <option value="">--Select--</option>
-          <option value="BAM1">BAM1</option>
-          <option value="BAM2">BAM2</option>
-          <option value="BR01">BR01</option>
-          <option value="ESS1">ESS1</option>
-          <option value="MFT1">MFT1</option>
-          <option value="HS01">HS01</option>
-          <option value="HS02">HS02</option>
-          <option value="HS03">HS03</option>
-          <option value="HS04">HS04</option>
-          <option value="HSMA">HSMA</option>
-          <option value="HSMB">HSMB</option>
-          <option value="HSMC">HSMC</option>
-          <option value="PA01">PA01</option>
-          <option value="Welders">Welders</option>
-        </select>
+        <span class="field-label">Website QR</span>
+        <input type="text" id="case-web" placeholder="Scan website QR code…" autocomplete="off" spellcheck="false">
+        <span class="field-status" id="st-case-web">○</span>
       </div>
-    </div>
 
-    <div class="row">
+      <div class="sub-label">QR 2 — Product unique</div>
       <div class="field">
-        <label for="productName">Product Name</label>
-        <input type="text" id="productName" placeholder="Enter product name">
+        <span class="field-label">Unique QR</span>
+        <input type="text" id="case-unique" placeholder="Scan unique QR code…" autocomplete="off" spellcheck="false">
+        <span class="field-status" id="st-case-unique">○</span>
       </div>
-      <div class="field">
-        <label for="wip">WIP</label>
-        <input type="text" id="wip" placeholder="Enter WIP">
-        <input type="text" id="wipConfirm" placeholder="Re-enter WIP">
-      </div>
-      <div class="field">
-        <label for="productNum">Product # (SAP)</label>
-        <input type="text" id="productNum" placeholder="Enter product number">
-        <input type="text" id="productNumConfirm" placeholder="Re-enter product number">
+      <div class="parsed-chips" id="case-parsed"><span style="color:var(--muted);font-family:var(--mono);font-size:11px;">parsed data will appear here after scan</span></div>
+    </div>
+  </div>
+
+  <!-- ── SECTION 3: Pouch Label (optional) ── -->
+  <div class="section" id="sec-pouch">
+    <div class="section-header">
+      <div class="section-icon">🏷️</div>
+      <span class="section-title">Pouch Label <span style="color:var(--muted);font-weight:400;font-size:11px;">(optional)</span></span>
+      <span class="section-badge" id="badge-pouch">SKIPPED</span>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle" id="pouchToggle"></div>
+      <label for="pouchToggle" onclick="togglePouch()">This product has a pouch label</label>
+    </div>
+    <div id="pouch-fields" style="display:none">
+      <div class="section-body" style="padding-top:0">
+        <div class="sub-label">QR 1 — Website launcher</div>
+        <div class="field">
+          <span class="field-label">Website QR</span>
+          <input type="text" id="pouch-web" placeholder="Scan website QR code…" autocomplete="off" spellcheck="false">
+          <span class="field-status" id="st-pouch-web">○</span>
+        </div>
+
+        <div class="sub-label">QR 2 — Product unique</div>
+        <div class="field">
+          <span class="field-label">Unique QR</span>
+          <input type="text" id="pouch-unique" placeholder="Scan unique QR code…" autocomplete="off" spellcheck="false">
+          <span class="field-status" id="st-pouch-unique">○</span>
+        </div>
+        <div class="parsed-chips" id="pouch-parsed"><span style="color:var(--muted);font-family:var(--mono);font-size:11px;">parsed data will appear here after scan</span></div>
       </div>
     </div>
+  </div>
 
-    <div class="row">
-      <div class="field">
-        <label for="color">Color</label>
-        <select id="color">
-          <option value="">--Select Color--</option>
-          <option value="Orange">Orange</option>
-          <option value="Purple">Purple</option>
-          <option value="Yellow">Yellow</option>
-        </select>
-      </div>
-      <div class="field small">
-        <label for="colorAmount">Placard Amount</label>
-        <input type="number" id="colorAmount" placeholder="Qty">
-      </div>
+  <!-- ── Summary ── -->
+  <div id="summary">
+    <div class="summary-title">Verification Summary</div>
+    <div class="result-list" id="result-list"></div>
+    <div class="final-verdict" id="final-verdict"></div>
+  </div>
 
-    </div>
+  <button class="btn-reset" onclick="resetAll()">↺ Reset / New Batch</button>
 
-    <div class="row">
-      <div class="field small">
-        <label for="controlledDoc">Controlled Document?</label>
-        <select id="controlledDoc">
-          <option value="">--Select--</option>
-          <option value="Yes">Yes</option>
-          <option value="No">No</option>
-        </select>
-      </div>
-    </div>
-
-    <div id="previewRow">
-      <span id="preview"></span>
-      <span id="lotDisplay" title="Click to copy LOT #">
-        <span id="lotDisplayMain"></span>
-        <span id="lotDisplaySub">click to copy</span>
-      </span>
-    </div>
-
-    <div id="copyNotice">✔ Copied!</div>
-    <button type="submit">Add to List</button>
-    <button type="button" onclick="copyList()">Copy All</button>
-    <button id="reorderButton" type="button" onclick="reorderList()">Placard Order</button>
-    <button type="button" onclick="clearAll()" style="background:linear-gradient(135deg,#e53935,#ef5350)">Clear Form</button>
-  </form>
-
-  <textarea id="list" placeholder="Your added lots will appear here..."></textarea>
 </div>
 
 <script>
-// ──────────────────────────────────────────────
-//  MBR DATA  (embedded from MBRv1.csv)
-// ──────────────────────────────────────────────
-const MBR_DATA = [{"SAP #": "700002322", "WIP": "43780097762", "Item Name": "FTBFD9960", "Product Standard Link": "https://neogen.pscace.com/project/record/preview?id=78163&version=167443", "Product Standard Ace Form": "FS-WI-1029", "Machine": "BAM1", "Labels": "1500", "Placards": "(35) PURPLE", "# Solns": "20", "Solution": "FS-FRM-1919", "Solution Link": "https://neogen.pscace.com/project/record/view?id=78622", "Machine Link": "https://neogen.pscace.com/project/record/view?id=78385", "BR #": "FS-FRM-1911", "CODE": "FA", "VOL CODE": "I", "Combined": "FAI", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002321", "WIP": "43780097374", "Item Name": "FTPHB9960", "Product Standard Link": "https://neogen.pscace.com/project/record/preview?id=95676&version=136771", "Product Standard Ace Form": "FS-WI-1131", "Machine": "BAM1", "Labels": "1500", "Placards": "(35) PURPLE", "# Solns": "20", "Solution": "FS-FRM-2097\nFS-FRM-2096", "Solution Link": "https://neogen.pscace.com/project/record/view?id=95606", "Machine Link": "https://neogen.pscace.com/project/record/view?id=95677", "BR #": "FS-FRM-2098", "CODE": "FB", "VOL CODE": "I", "Combined": "FBI", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002320", "WIP": "43780097390", "Item Name": "FTPW9960", "Product Standard Link": "https://neogen.pscace.com/project/record/preview?id=117515&version=165565", "Product Standard Ace Form": "FS-WI-1241", "Machine": "BAM1", "Labels": "1500", "Placards": "(35) ORANGE", "# Solns": "20", "Solution": "FS-FRM-2265", "Solution Link": "https://neogen.pscace.com/project/record/view?id=117523", "Machine Link": "https://neogen.pscace.com/project/record/view?id=117518", "BR #": "FS-FRM-2264", "CODE": "FC", "VOL CODE": "I", "Combined": "FCI", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002327", "WIP": "43780097333", "Item Name": "FTBFD9060", "Product Standard Link": "https://neogen.pscace.com/project/record/preview?id=99213&version=141592", "Product Standard Ace Form": "FS-WI-1140", "Machine": "BAM1", "Labels": "1500", "Placards": "(35) PURPLE", "# Solns": "20", "Solution": "FS-FRM-1919", "Solution Link": "https://neogen.pscace.com/project/record/view?id=78622", "Machine Link": "https://neogen.pscace.com/project/record/view?id=98530", "BR #": "FS-FRM-2109", "CODE": "FD", "VOL CODE": "H", "Combined": "FDH", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002326", "WIP": "43780097358", "Item Name": "FTBPW9060", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=119814", "Product Standard Ace Form": "FS-WI-1272", "Machine": "BAM1", "Labels": "1500", "Placards": "(35) ORANGE", "# Solns": "20", "Solution": "FS-FRM-2279", "Solution Link": "https://neogen.pscace.com/project/record/view?id=120431", "Machine Link": "https://neogen.pscace.com/project/record/view?id=119812", "BR #": "FS-FRM-2275", "CODE": "FE", "VOL CODE": "H", "Combined": "FEH", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002323", "WIP": "43780097382", "Item Name": "FTPW9060", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=106127", "Product Standard Ace Form": "FS-WI-1167", "Machine": "BAM1", "Labels": "1500", "Placards": "(35) ORANGE", "# Solns": "20", "Solution": "FS-FRM-2211", "Solution Link": "https://neogen.pscace.com/project/record/view?id=106076", "Machine Link": "https://neogen.pscace.com/project/record/view?id=106129", "BR #": "FS-FRM-2212", "CODE": "FF", "VOL CODE": "H", "Combined": "FFH", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002324", "WIP": "43780097341", "Item Name": "FTBPWI9060", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=107991", "Product Standard Ace Form": "FS-WI-1173", "Machine": "BAM1", "Labels": "1500", "Placards": "(35) YELLOW", "# Solns": "20", "Solution": "FS-FRM-1839", "Solution Link": "https://neogen.pscace.com/project/record/view?id=73416", "Machine Link": "https://neogen.pscace.com/project/record/view?id=107997", "BR #": "FS-FRM-2224", "CODE": "FG", "VOL CODE": "H", "Combined": "FGH", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002330", "WIP": "43780097366", "Item Name": "FTPHB9060", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=100801&layout=main&set=0", "Product Standard Ace Form": "FS-WI-1148", "Machine": "BAM1", "Labels": "1500", "Placards": "(35) PURPLE", "# Solns": "20", "Solution": "FS-FRM-2097\nFS-FRM-2096", "Solution Link": "https://neogen.pscace.com/project/record/view?id=95606", "Machine Link": "https://neogen.pscace.com/project/record/view?id=100811", "BR #": "FS-FRM-2146", "CODE": "FH", "VOL CODE": "H", "Combined": "FHH", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002329", "WIP": "43780097309", "Item Name": "BRBFD40030", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=79072&layout=main&set=0", "Product Standard Ace Form": "FS-WI-1040", "Machine": "BAM2", "Labels": "500", "Placards": "(15) PURPLE", "# Solns": "20", "Solution": "FS-FRM-1928", "Solution Link": "https://neogen.pscace.com/project/record/view?id=79062", "Machine Link": "https://neogen.pscace.com/project/record/view?id=79073", "BR #": "FS-FRM-1929", "CODE": "BA", "VOL CODE": "L", "Combined": "BAL", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002325", "WIP": "43780097754", "Item Name": "BRBPW40030", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=73400&layout=main&set=0", "Product Standard Ace Form": "FS-WI-0980", "Machine": "BAM2", "Labels": "500", "Placards": "(15) ORANGE", "# Solns": "20", "Solution": "FS-FRM-1836", "Solution Link": "https://neogen.pscace.com/project/record/view?id=73398", "Machine Link": "https://neogen.pscace.com/project/record/view?id=73425", "BR #": "FS-FRM-1842", "CODE": "BB", "VOL CODE": "L", "Combined": "BBL", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002322", "WIP": "43780097762", "Item Name": "FTBFD9960", "Product Standard Link": "https://neogen.pscace.com/project/record/preview?id=73390&version=107298", "Product Standard Ace Form": "FS-WI-0973", "Machine": "BAM2", "Labels": "500", "Placards": "(15) PURPLE", "# Solns": "10", "Solution": "FS-FRM-1835", "Solution Link": "https://neogen.pscace.com/project/record/view?id=73397", "Machine Link": "https://neogen.pscace.com/project/record/view?id=73396", "BR #": "FS-FRM-1834", "CODE": "FA", "VOL CODE": "I", "Combined": "FAI", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002320", "WIP": "43780097390", "Item Name": "FTPW9960", "Product Standard Link": "https://neogen.pscace.com/project/record/preview?id=97031&version=138522", "Product Standard Ace Form": "FS-WI-1137", "Machine": "BAM2", "Labels": "500", "Placards": "(15) ORANGE", "# Solns": "10", "Solution": "FS-FRM-2103", "Solution Link": "https://neogen.pscace.com/project/record/view?id=96588", "Machine Link": "https://neogen.pscace.com/project/record/view?id=96896", "BR #": "FS-FRM-2105", "CODE": "FC", "VOL CODE": "I", "Combined": "FCI", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002327", "WIP": "43780097333", "Item Name": "FTBFD9060", "Product Standard Link": "https://neogen.pscace.com/project/record/preview?id=107886&version=153340", "Product Standard Ace Form": "FS-WI-1172", "Machine": "BAM2", "Labels": "500", "Placards": "(15) PURPLE", "# Solns": "10", "Solution": "FS-FRM-2220", "Solution Link": "https://neogen.pscace.com/project/record/view?id=107884", "Machine Link": "https://neogen.pscace.com/project/record/view?id=107887", "BR #": "FS-FRM-2221", "CODE": "FD", "VOL CODE": "H", "Combined": "FDH", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002326", "WIP": "43780097358", "Item Name": "FTBPW9060", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=102132", "Product Standard Ace Form": "FS-WI-1153", "Machine": "BAM2", "Labels": "500", "Placards": "(15) ORANGE", "# Solns": "10", "Solution": "FS-FRM-2165", "Solution Link": "https://neogen.pscace.com/project/record/view?id=101913", "Machine Link": "https://neogen.pscace.com/project/record/view?id=102169", "BR #": "FS-FRM-2170", "CODE": "FE", "VOL CODE": "H", "Combined": "FEH", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002323", "WIP": "43780097382", "Item Name": "FTPW9060", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=103066", "Product Standard Ace Form": "FS-WI-1156", "Machine": "BAM2", "Labels": "500", "Placards": "(15) ORANGE", "# Solns": "10", "Solution": "FS-FRM-2172", "Solution Link": "https://neogen.pscace.com/project/record/view?id=102542", "Machine Link": "https://neogen.pscace.com/project/record/view?id=103069", "BR #": "FS-FRM-2178", "CODE": "FF", "VOL CODE": "H", "Combined": "FFH", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002324", "WIP": "43780097341", "Item Name": "FTBPWI9060", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=99922", "Product Standard Ace Form": "FS-WI-1143", "Machine": "BAM2", "Labels": "500", "Placards": "(15) YELLOW", "# Solns": "10", "Solution": "FS-FRM-2116", "Solution Link": "https://neogen.pscace.com/project/record/view?id=99769", "Machine Link": "https://neogen.pscace.com/project/record/view?id=99913", "BR #": "FS-FRM-2117", "CODE": "FG", "VOL CODE": "H", "Combined": "FGH", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002108", "WIP": "43780010872", "Item Name": "SSL10LET2G", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=73295", "Product Standard Ace Form": "FS-WI-0912", "Machine": "HS01", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1796", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72872", "Machine Link": "https://neogen.pscace.com/project/record/view?id=72905", "BR #": "FS-FRM-1797", "CODE": "HA", "VOL CODE": "F", "Combined": "HAF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002108", "WIP": "43780010872", "Item Name": "SSL10LET2G", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=73295", "Product Standard Ace Form": "FS-WI-0912", "Machine": "HS03", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1796", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72872", "Machine Link": "https://neogen.pscace.com/project/record/view?id=72906", "BR #": "FS-FRM-1797", "CODE": "HA", "VOL CODE": "F", "Combined": "HAF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002108", "WIP": "43780010872", "Item Name": "SSL10LET2G", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=73295", "Product Standard Ace Form": "FS-WI-0912", "Machine": "HS04", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1796", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72872", "Machine Link": "https://neogen.pscace.com/project/record/view?id=72907", "BR #": "FS-FRM-1797", "CODE": "HA", "VOL CODE": "F", "Combined": "HAF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002108", "WIP": "43780010872", "Item Name": "SSL10LET2G", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=103275", "Product Standard Ace Form": "FS-WI-1158", "Machine": "HSMA", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1796", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72872", "Machine Link": "https://neogen.pscace.com/project/record/view?id=103276", "BR #": "FS-FRM-2182", "CODE": "HA", "VOL CODE": "F", "Combined": "HAF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002002", "WIP": "43780010161", "Item Name": "HS10NB2G", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=62321", "Product Standard Ace Form": "FS-WI-0787", "Machine": "HS01", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "2", "Solution": "FS-FRM-1684", "Solution Link": "https://neogen.pscace.com/project/record/view?id=62263", "Machine Link": "https://neogen.pscace.com/project/record/view?id=62272", "BR #": "FS-FRM-1693", "CODE": "HB", "VOL CODE": "F", "Combined": "HBF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002002", "WIP": "43780010161", "Item Name": "HS10NB2G", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=62321", "Product Standard Ace Form": "FS-WI-0787", "Machine": "HS03", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "2", "Solution": "FS-FRM-1684", "Solution Link": "https://neogen.pscace.com/project/record/view?id=62263", "Machine Link": "https://neogen.pscace.com/project/record/view?id=62272", "BR #": "FS-FRM-1693", "CODE": "HB", "VOL CODE": "F", "Combined": "HBF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002002", "WIP": "43780010161", "Item Name": "HS10NB2G", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=62321", "Product Standard Ace Form": "FS-WI-0787", "Machine": "HS04", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "2", "Solution": "FS-FRM-1684", "Solution Link": "https://neogen.pscace.com/project/record/view?id=62263", "Machine Link": "https://neogen.pscace.com/project/record/view?id=62272", "BR #": "FS-FRM-1693", "CODE": "HB", "VOL CODE": "F", "Combined": "HBF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002002", "WIP": "43780010161", "Item Name": "HS10NB2G", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=111079", "Product Standard Ace Form": "FS-WI-1178", "Machine": "HSMA", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "2", "Solution": "FS-FRM-1684", "Solution Link": "https://neogen.pscace.com/project/record/view?id=62263", "Machine Link": "https://neogen.pscace.com/project/record/view?id=111076", "BR #": "FS-FRM-2235", "CODE": "HB", "VOL CODE": "F", "Combined": "HBF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002213", "WIP": "43780010203", "Item Name": "HS10NB", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=73405", "Product Standard Ace Form": "FS-WI-0985", "Machine": "HS01", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "2", "Solution": "FS-FRM-1684", "Solution Link": "https://neogen.pscace.com/project/record/view?id=62263", "Machine Link": "https://neogen.pscace.com/project/record/view?id=73430", "BR #": "FS-FRM-1844", "CODE": "HC", "VOL CODE": "F", "Combined": "HCF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002213", "WIP": "43780010203", "Item Name": "HS10NB", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=73405", "Product Standard Ace Form": "FS-WI-0985", "Machine": "HS03", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "2", "Solution": "FS-FRM-1684", "Solution Link": "https://neogen.pscace.com/project/record/view?id=62263", "Machine Link": "https://neogen.pscace.com/project/record/view?id=73430", "BR #": "FS-FRM-1844", "CODE": "HC", "VOL CODE": "F", "Combined": "HCF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002213", "WIP": "43780010203", "Item Name": "HS10NB", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=73405", "Product Standard Ace Form": "FS-WI-0985", "Machine": "HS04", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "2", "Solution": "FS-FRM-1684", "Solution Link": "https://neogen.pscace.com/project/record/view?id=62263", "Machine Link": "https://neogen.pscace.com/project/record/view?id=73430", "BR #": "FS-FRM-1844", "CODE": "HC", "VOL CODE": "F", "Combined": "HCF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002213", "WIP": "43780010203", "Item Name": "HS10NB", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=99951", "Product Standard Ace Form": "FS-WI-1144", "Machine": "HSMA", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "2", "Solution": "FS-FRM-1684", "Solution Link": "https://neogen.pscace.com/project/record/view?id=62263", "Machine Link": "https://neogen.pscace.com/project/record/view?id=99952", "BR #": "FS-FRM-2118", "CODE": "HC", "VOL CODE": "F", "Combined": "HCF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002205", "WIP": "43780010153", "Item Name": "HS10LET", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=75421", "Product Standard Ace Form": "FS-WI-1003", "Machine": "HS01", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1796", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72872", "Machine Link": "https://neogen.pscace.com/project/record/view?id=75425", "BR #": "FS-FRM-1874", "CODE": "HD", "VOL CODE": "F", "Combined": "HDF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002205", "WIP": "43780010153", "Item Name": "HS10LET", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=75421", "Product Standard Ace Form": "FS-WI-1003", "Machine": "HS03", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1796", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72872", "Machine Link": "https://neogen.pscace.com/project/record/view?id=75425", "BR #": "FS-FRM-1874", "CODE": "HD", "VOL CODE": "F", "Combined": "HDF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002205", "WIP": "43780010153", "Item Name": "HS10LET", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=75421", "Product Standard Ace Form": "FS-WI-1003", "Machine": "HS04", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1796", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72872", "Machine Link": "https://neogen.pscace.com/project/record/view?id=75425", "BR #": "FS-FRM-1874", "CODE": "HD", "VOL CODE": "F", "Combined": "HDF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002205", "WIP": "43780010153", "Item Name": "HS10LET", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=95373", "Product Standard Ace Form": "FS-WI-1126", "Machine": "HSMA", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1796", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72872", "Machine Link": "https://neogen.pscace.com/project/record/view?id=95374", "BR #": "FS-FRM-2092", "CODE": "HD", "VOL CODE": "F", "Combined": "HDF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002338", "WIP": "43780101390", "Item Name": "ESS10WSN", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=62317", "Product Standard Ace Form": "FS-WI-0783", "Machine": "HS01", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "4", "Solution": "FS-FRM-1690", "Solution Link": "https://neogen.pscace.com/project/record/view?id=62269", "Machine Link": "https://neogen.pscace.com/project/record/view?id=62268", "BR #": "FS-FRM-1689", "CODE": "HE", "VOL CODE": "F", "Combined": "HEF", "EXPIRATION (MONTHS)": "15"}, {"SAP #": "700002338", "WIP": "43780101390", "Item Name": "ESS10WSN", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=62317", "Product Standard Ace Form": "FS-WI-0783", "Machine": "HS03", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "4", "Solution": "FS-FRM-1690", "Solution Link": "https://neogen.pscace.com/project/record/view?id=62269", "Machine Link": "https://neogen.pscace.com/project/record/view?id=62268", "BR #": "FS-FRM-1689", "CODE": "HE", "VOL CODE": "F", "Combined": "HEF", "EXPIRATION (MONTHS)": "15"}, {"SAP #": "700002338", "WIP": "43780101390", "Item Name": "ESS10WSN", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=62317", "Product Standard Ace Form": "FS-WI-0783", "Machine": "HS04", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "4", "Solution": "FS-FRM-1690", "Solution Link": "https://neogen.pscace.com/project/record/view?id=62269", "Machine Link": "https://neogen.pscace.com/project/record/view?id=62268", "BR #": "FS-FRM-1689", "CODE": "HE", "VOL CODE": "F", "Combined": "HEF", "EXPIRATION (MONTHS)": "15"}, {"SAP #": "700002338", "WIP": "43780101390", "Item Name": "ESS10WSN", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=100349", "Product Standard Ace Form": "FS-WI-1145", "Machine": "HSMA", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "4", "Solution": "FS-FRM-1690", "Solution Link": "https://neogen.pscace.com/project/record/view?id=62269", "Machine Link": "https://neogen.pscace.com/project/record/view?id=100348", "BR #": "FS-FRM-2120", "CODE": "HE", "VOL CODE": "F", "Combined": "HEF", "EXPIRATION (MONTHS)": "15"}, {"SAP #": "700002202", "WIP": "43780016953", "Item Name": "SSL10BPW", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=77220", "Product Standard Ace Form": "FS-WI-1026", "Machine": "HS01", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1900", "Solution Link": "https://neogen.pscace.com/project/record/view?id=76988", "Machine Link": "https://neogen.pscace.com/project/record/view?id=77219", "BR #": "FS-FRM-1903", "CODE": "HF", "VOL CODE": "F", "Combined": "HFF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002202", "WIP": "43780016953", "Item Name": "SSL10BPW", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=77220", "Product Standard Ace Form": "FS-WI-1026", "Machine": "HS03", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1900", "Solution Link": "https://neogen.pscace.com/project/record/view?id=76988", "Machine Link": "https://neogen.pscace.com/project/record/view?id=77219", "BR #": "FS-FRM-1903", "CODE": "HF", "VOL CODE": "F", "Combined": "HFF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002202", "WIP": "43780016953", "Item Name": "SSL10BPW", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=77220", "Product Standard Ace Form": "FS-WI-1026", "Machine": "HS04", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1900", "Solution Link": "https://neogen.pscace.com/project/record/view?id=76988", "Machine Link": "https://neogen.pscace.com/project/record/view?id=77219", "BR #": "FS-FRM-1903", "CODE": "HF", "VOL CODE": "F", "Combined": "HFF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002202", "WIP": "43780016953", "Item Name": "SSL10BPW", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=89291", "Product Standard Ace Form": "FS-WI-1107", "Machine": "HSMA", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1900", "Solution Link": "https://neogen.pscace.com/project/record/view?id=76988", "Machine Link": "https://neogen.pscace.com/project/record/view?id=89285", "BR #": "FS-FRM-2063", "CODE": "HF", "VOL CODE": "F", "Combined": "HFF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002212", "WIP": "43780010096", "Item Name": "HS10BPW2G", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=80996", "Product Standard Ace Form": "FS-WI-1064", "Machine": "HS01", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1900", "Solution Link": "https://neogen.pscace.com/project/record/view?id=76988", "Machine Link": "https://neogen.pscace.com/project/record/view?id=80995", "BR #": "FS-FRM-1956", "CODE": "HG", "VOL CODE": "F", "Combined": "HGF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002212", "WIP": "43780010096", "Item Name": "HS10BPW2G", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=80996", "Product Standard Ace Form": "FS-WI-1064", "Machine": "HS03", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1900", "Solution Link": "https://neogen.pscace.com/project/record/view?id=76988", "Machine Link": "https://neogen.pscace.com/project/record/view?id=80995", "BR #": "FS-FRM-1956", "CODE": "HG", "VOL CODE": "F", "Combined": "HGF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002212", "WIP": "43780010096", "Item Name": "HS10BPW2G", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=80996", "Product Standard Ace Form": "FS-WI-1064", "Machine": "HS04", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1900", "Solution Link": "https://neogen.pscace.com/project/record/view?id=76988", "Machine Link": "https://neogen.pscace.com/project/record/view?id=80995", "BR #": "FS-FRM-1956", "CODE": "HG", "VOL CODE": "F", "Combined": "HGF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002212", "WIP": "43780010096", "Item Name": "HS10BPW2G", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=106529", "Product Standard Ace Form": "FS-WI-1168", "Machine": "HSMA", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1900", "Solution Link": "https://neogen.pscace.com/project/record/view?id=76988", "Machine Link": "https://neogen.pscace.com/project/record/view?id=106528", "BR #": "FS-FRM-2214", "CODE": "HG", "VOL CODE": "F", "Combined": "HGF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002024", "WIP": "43780009304", "Item Name": "BP133ES", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=73308", "Product Standard Ace Form": "FS-WI-0925", "Machine": "HS01", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "0", "Solution": "N/A", "Solution Link": "", "Machine Link": "https://neogen.pscace.com/project/record/view?id=72946", "BR #": "FS-FRM-1809", "CODE": "HH", "VOL CODE": "A", "Combined": "HHA", "EXPIRATION (MONTHS)": "60"}, {"SAP #": "700002024", "WIP": "43780009304", "Item Name": "BP133ES", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=73308", "Product Standard Ace Form": "FS-WI-0925", "Machine": "HS03", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "0", "Solution": "N/A", "Solution Link": "", "Machine Link": "https://neogen.pscace.com/project/record/view?id=72946", "BR #": "FS-FRM-1809", "CODE": "HH", "VOL CODE": "A", "Combined": "HHA", "EXPIRATION (MONTHS)": "60"}, {"SAP #": "700002024", "WIP": "43780009304", "Item Name": "BP133ES", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=73308", "Product Standard Ace Form": "FS-WI-0925", "Machine": "HS04", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "0", "Solution": "N/A", "Solution Link": "", "Machine Link": "https://neogen.pscace.com/project/record/view?id=72946", "BR #": "FS-FRM-1809", "CODE": "HH", "VOL CODE": "A", "Combined": "HHA", "EXPIRATION (MONTHS)": "60"}, {"SAP #": "700002024", "WIP": "43780009304", "Item Name": "BP133ES", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=80311", "Product Standard Ace Form": "FS-WI-1060", "Machine": "HSMA", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "0", "Solution": "N/A", "Solution Link": "", "Machine Link": "https://neogen.pscace.com/project/record/view?id=79568", "BR #": "FS-FRM-1940", "CODE": "HH", "VOL CODE": "A", "Combined": "HHA", "EXPIRATION (MONTHS)": "60"}, {"SAP #": "700002337", "WIP": "43780101374", "Item Name": "HES10WSN2G", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=80133&layout=main&set=0", "Product Standard Ace Form": "FS-WI-1057", "Machine": "HS01", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "4", "Solution": "FS-FRM-1690", "Solution Link": "https://neogen.pscace.com/project/record/view?id=62269", "Machine Link": "https://neogen.pscace.com/project/record/view?id=80132", "BR #": "FS-FRM-1948", "CODE": "HI", "VOL CODE": "F", "Combined": "HIF", "EXPIRATION (MONTHS)": "15"}, {"SAP #": "700002337", "WIP": "43780101374", "Item Name": "HES10WSN2G", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=80133&layout=main&set=0", "Product Standard Ace Form": "FS-WI-1057", "Machine": "HS03", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "4", "Solution": "FS-FRM-1690", "Solution Link": "https://neogen.pscace.com/project/record/view?id=62269", "Machine Link": "https://neogen.pscace.com/project/record/view?id=80132", "BR #": "FS-FRM-1948", "CODE": "HI", "VOL CODE": "F", "Combined": "HIF", "EXPIRATION (MONTHS)": "15"}, {"SAP #": "700002337", "WIP": "43780101374", "Item Name": "HES10WSN2G", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=80133&layout=main&set=0", "Product Standard Ace Form": "FS-WI-1057", "Machine": "HS04", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "4", "Solution": "FS-FRM-1690", "Solution Link": "https://neogen.pscace.com/project/record/view?id=62269", "Machine Link": "https://neogen.pscace.com/project/record/view?id=80132", "BR #": "FS-FRM-1948", "CODE": "HI", "VOL CODE": "F", "Combined": "HIF", "EXPIRATION (MONTHS)": "15"}, {"SAP #": "700002109", "WIP": "43780016979", "Item Name": "SSL10LET", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=76239", "Product Standard Ace Form": "FS-WI-1012", "Machine": "HS01", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1796", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72872", "Machine Link": "https://neogen.pscace.com/project/record/view?id=76237", "BR #": "FS-FRM-1891", "CODE": "HJ", "VOL CODE": "F", "Combined": "HJF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002109", "WIP": "43780016979", "Item Name": "SSL10LET", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=76239", "Product Standard Ace Form": "FS-WI-1012", "Machine": "HS03", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1796", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72872", "Machine Link": "https://neogen.pscace.com/project/record/view?id=76237", "BR #": "FS-FRM-1891", "CODE": "HJ", "VOL CODE": "F", "Combined": "HJF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002109", "WIP": "43780016979", "Item Name": "SSL10LET", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=76239", "Product Standard Ace Form": "FS-WI-1012", "Machine": "HS04", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1796", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72872", "Machine Link": "https://neogen.pscace.com/project/record/view?id=76237", "BR #": "FS-FRM-1891", "CODE": "HJ", "VOL CODE": "F", "Combined": "HJF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002109", "WIP": "43780016979", "Item Name": "SSL10LET", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=90341", "Product Standard Ace Form": "FS-WI-1110", "Machine": "HSMA", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1796", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72872", "Machine Link": "https://neogen.pscace.com/project/record/view?id=90339", "BR #": "FS-FRM-2071", "CODE": "HJ", "VOL CODE": "F", "Combined": "HJF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002201", "WIP": "43780016496", "Item Name": "SSL100", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=76918", "Product Standard Ace Form": "FS-WI-1020", "Machine": "HS01", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "0", "Solution": "N/A", "Solution Link": "", "Machine Link": "https://neogen.pscace.com/project/record/view?id=76919", "BR #": "FS-FRM-1896", "CODE": "HK", "VOL CODE": "A", "Combined": "HKA", "EXPIRATION (MONTHS)": "60"}, {"SAP #": "700002201", "WIP": "43780016496", "Item Name": "SSL100", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=76918", "Product Standard Ace Form": "FS-WI-1020", "Machine": "HS03", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "0", "Solution": "N/A", "Solution Link": "", "Machine Link": "https://neogen.pscace.com/project/record/view?id=76919", "BR #": "FS-FRM-1896", "CODE": "HK", "VOL CODE": "A", "Combined": "HKA", "EXPIRATION (MONTHS)": "60"}, {"SAP #": "700002201", "WIP": "43780016496", "Item Name": "SSL100", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=76918", "Product Standard Ace Form": "FS-WI-1020", "Machine": "HS04", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "0", "Solution": "N/A", "Solution Link": "", "Machine Link": "https://neogen.pscace.com/project/record/view?id=76919", "BR #": "FS-FRM-1896", "CODE": "HK", "VOL CODE": "A", "Combined": "HKA", "EXPIRATION (MONTHS)": "60"}, {"SAP #": "700002201", "WIP": "43780016496", "Item Name": "SSL100", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=73307", "Product Standard Ace Form": "FS-WI-0924", "Machine": "HS02", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "0", "Solution": "N/A", "Solution Link": "", "Machine Link": "https://neogen.pscace.com/project/record/view?id=72945", "BR #": "FS-FRM-1808", "CODE": "HK", "VOL CODE": "A", "Combined": "HKA", "EXPIRATION (MONTHS)": "60"}, {"SAP #": "700002201", "WIP": "43780016496", "Item Name": "SSL100", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=95476", "Product Standard Ace Form": "FS-WI-1127", "Machine": "HSMA", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "0", "Solution": "N/A", "Solution Link": "", "Machine Link": "https://neogen.pscace.com/project/record/view?id=95475", "BR #": "FS-FRM-2094", "CODE": "HK", "VOL CODE": "A", "Combined": "HKA", "EXPIRATION (MONTHS)": "60"}, {"SAP #": "700002076", "WIP": "43780016961", "Item Name": "SSL10DE", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=73297", "Product Standard Ace Form": "FS-WI-0914", "Machine": "HS01", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1951", "Solution Link": "https://neogen.pscace.com/project/record/view?id=80369", "Machine Link": "https://neogen.pscace.com/project/record/view?id=72908", "BR #": "FS-FRM-1799", "CODE": "HL", "VOL CODE": "F", "Combined": "HLF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002076", "WIP": "43780016961", "Item Name": "SSL10DE", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=73297", "Product Standard Ace Form": "FS-WI-0914", "Machine": "HS03", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1951", "Solution Link": "https://neogen.pscace.com/project/record/view?id=80369", "Machine Link": "https://neogen.pscace.com/project/record/view?id=72908", "BR #": "FS-FRM-1799", "CODE": "HL", "VOL CODE": "F", "Combined": "HLF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002076", "WIP": "43780016961", "Item Name": "SSL10DE", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=73297", "Product Standard Ace Form": "FS-WI-0914", "Machine": "HS04", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1951", "Solution Link": "https://neogen.pscace.com/project/record/view?id=80369", "Machine Link": "https://neogen.pscace.com/project/record/view?id=72908", "BR #": "FS-FRM-1799", "CODE": "HL", "VOL CODE": "F", "Combined": "HLF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002076", "WIP": "43780016961", "Item Name": "SSL10DE", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=95688", "Product Standard Ace Form": "FS-WI-1132", "Machine": "HSMA", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1951", "Solution Link": "https://neogen.pscace.com/project/record/view?id=80369", "Machine Link": "https://neogen.pscace.com/project/record/view?id=95687", "BR #": "FS-FRM-2099", "CODE": "HL", "VOL CODE": "F", "Combined": "HLF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002025", "WIP": "43780009353", "Item Name": "BP237SPG", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=80496&layout=main&set=0", "Product Standard Ace Form": "FS-WI-1062", "Machine": "HS01", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "0", "Solution": "N/A", "Solution Link": "", "Machine Link": "https://neogen.pscace.com/project/record/view?id=80440", "BR #": "FS-FRM-1952", "CODE": "HM", "VOL CODE": "A", "Combined": "HMA", "EXPIRATION (MONTHS)": "60"}, {"SAP #": "700002025", "WIP": "43780009353", "Item Name": "BP237SPG", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=80496&layout=main&set=0", "Product Standard Ace Form": "FS-WI-1062", "Machine": "HS03", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "0", "Solution": "N/A", "Solution Link": "", "Machine Link": "https://neogen.pscace.com/project/record/view?id=80440", "BR #": "FS-FRM-1952", "CODE": "HM", "VOL CODE": "A", "Combined": "HMA", "EXPIRATION (MONTHS)": "60"}, {"SAP #": "700002025", "WIP": "43780009353", "Item Name": "BP237SPG", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=80496&layout=main&set=0", "Product Standard Ace Form": "FS-WI-1062", "Machine": "HS04", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "0", "Solution": "N/A", "Solution Link": "", "Machine Link": "https://neogen.pscace.com/project/record/view?id=80440", "BR #": "FS-FRM-1952", "CODE": "HM", "VOL CODE": "A", "Combined": "HMA", "EXPIRATION (MONTHS)": "60"}, {"SAP #": "700002004", "WIP": "43780010906", "Item Name": "SSL10NB2G", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=73292", "Product Standard Ace Form": "FS-WI-0909", "Machine": "HS01", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "2", "Solution": "FS-FRM-1684", "Solution Link": "https://neogen.pscace.com/project/record/view?id=62263", "Machine Link": "https://neogen.pscace.com/project/record/view?id=72868", "BR #": "FS-FRM-1795", "CODE": "HN", "VOL CODE": "F", "Combined": "HNF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002004", "WIP": "43780010906", "Item Name": "SSL10NB2G", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=73292", "Product Standard Ace Form": "FS-WI-0909", "Machine": "HS03", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "2", "Solution": "FS-FRM-1684", "Solution Link": "https://neogen.pscace.com/project/record/view?id=62263", "Machine Link": "https://neogen.pscace.com/project/record/view?id=72868", "BR #": "FS-FRM-1795", "CODE": "HN", "VOL CODE": "F", "Combined": "HNF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002004", "WIP": "43780010906", "Item Name": "SSL10NB2G", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=73292", "Product Standard Ace Form": "FS-WI-0909", "Machine": "HS04", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "2", "Solution": "FS-FRM-1684", "Solution Link": "https://neogen.pscace.com/project/record/view?id=62263", "Machine Link": "https://neogen.pscace.com/project/record/view?id=72868", "BR #": "FS-FRM-1795", "CODE": "HN", "VOL CODE": "F", "Combined": "HNF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002004", "WIP": "43780010906", "Item Name": "SSL10NB2G", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=95478", "Product Standard Ace Form": "FS-WI-1128", "Machine": "HSMA", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "2", "Solution": "FS-FRM-1684", "Solution Link": "https://neogen.pscace.com/project/record/view?id=62263", "Machine Link": "https://neogen.pscace.com/project/record/view?id=95479", "BR #": "FS-FR-2095", "CODE": "HN", "VOL CODE": "F", "Combined": "HNF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002003", "WIP": "43780016995", "Item Name": "SSL10NB", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=74367", "Product Standard Ace Form": "FS-WI-0996", "Machine": "HS01", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "2", "Solution": "FS-FRM-1684", "Solution Link": "https://neogen.pscace.com/project/record/view?id=62263", "Machine Link": "https://neogen.pscace.com/project/record/view?id=74366", "BR #": "FS-FRM-1860", "CODE": "HO", "VOL CODE": "F", "Combined": "HOF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002003", "WIP": "43780016995", "Item Name": "SSL10NB", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=74367", "Product Standard Ace Form": "FS-WI-0996", "Machine": "HS03", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "2", "Solution": "FS-FRM-1684", "Solution Link": "https://neogen.pscace.com/project/record/view?id=62263", "Machine Link": "https://neogen.pscace.com/project/record/view?id=74366", "BR #": "FS-FRM-1860", "CODE": "HO", "VOL CODE": "F", "Combined": "HOF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002003", "WIP": "43780016995", "Item Name": "SSL10NB", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=74367", "Product Standard Ace Form": "FS-WI-0996", "Machine": "HS04", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "2", "Solution": "FS-FRM-1684", "Solution Link": "https://neogen.pscace.com/project/record/view?id=62263", "Machine Link": "https://neogen.pscace.com/project/record/view?id=74366", "BR #": "FS-FRM-1860", "CODE": "HO", "VOL CODE": "F", "Combined": "HOF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002003", "WIP": "43780016995", "Item Name": "SSL10NB", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=76924", "Product Standard Ace Form": "FS-WI-1021", "Machine": "BR01", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "2", "Solution": "FS-FRM-1684", "Solution Link": "https://neogen.pscace.com/project/record/view?id=62263", "Machine Link": "https://neogen.pscace.com/project/record/view?id=76923", "BR #": "FS-FRM-1899", "CODE": "HO", "VOL CODE": "F", "Combined": "HOF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002003", "WIP": "43780016995", "Item Name": "SSL10NB", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=76924", "Product Standard Ace Form": "FS-WI-1021", "Machine": "HSMA", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "2", "Solution": "FS-FRM-1684", "Solution Link": "https://neogen.pscace.com/project/record/view?id=62263", "Machine Link": "https://neogen.pscace.com/project/record/view?id=76923", "BR #": "FS-FRM-1899", "CODE": "HO", "VOL CODE": "F", "Combined": "HOF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002003", "WIP": "43780016995", "Item Name": "SSL10NB", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=73402", "Product Standard Ace Form": "FS-WI-0982", "Machine": "HS02", "Labels": "200 case/800 pouch", "Placards": "(10) PURPLE", "# Solns": "2", "Solution": "FS-FRM-1684", "Solution Link": "https://neogen.pscace.com/project/record/view?id=62263", "Machine Link": "https://neogen.pscace.com/project/record/view?id=73426", "BR #": "FS-FRM-1843", "CODE": "HO", "VOL CODE": "F", "Combined": "HOF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002204", "WIP": "43780010104", "Item Name": "HS10BPW", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=77202", "Product Standard Ace Form": "FS-WI-1025", "Machine": "HS01", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1900", "Solution Link": "https://neogen.pscace.com/project/record/view?id=76988", "Machine Link": "https://neogen.pscace.com/project/record/view?id=77201", "BR #": "FS-FRM-1901", "CODE": "HP", "VOL CODE": "F", "Combined": "HPF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002204", "WIP": "43780010104", "Item Name": "HS10BPW", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=77202", "Product Standard Ace Form": "FS-WI-1025", "Machine": "HS03", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1900", "Solution Link": "https://neogen.pscace.com/project/record/view?id=76988", "Machine Link": "https://neogen.pscace.com/project/record/view?id=77201", "BR #": "FS-FRM-1901", "CODE": "HP", "VOL CODE": "F", "Combined": "HPF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002204", "WIP": "43780010104", "Item Name": "HS10BPW", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=77202", "Product Standard Ace Form": "FS-WI-1025", "Machine": "HS04", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1900", "Solution Link": "https://neogen.pscace.com/project/record/view?id=76988", "Machine Link": "https://neogen.pscace.com/project/record/view?id=77201", "BR #": "FS-FRM-1901", "CODE": "HP", "VOL CODE": "F", "Combined": "HPF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002204", "WIP": "43780010104", "Item Name": "HS10BPW", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=94100", "Product Standard Ace Form": "FS-WI-1118", "Machine": "HSMA", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1900", "Solution Link": "https://neogen.pscace.com/project/record/view?id=76988", "Machine Link": "https://neogen.pscace.com/project/record/view?id=94095", "BR #": "FS-FRM-2084", "CODE": "HP", "VOL CODE": "F", "Combined": "HPF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002107", "WIP": "43780010112", "Item Name": "HS10DE2G", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=103100", "Product Standard Ace Form": "FS-WI-1157", "Machine": "HS01", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1951", "Solution Link": "https://neogen.pscace.com/project/record/view?id=80369", "Machine Link": "https://neogen.pscace.com/project/record/view?id=103099", "BR #": "FS-FRM-2179", "CODE": "HQ", "VOL CODE": "F", "Combined": "HQF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002107", "WIP": "43780010112", "Item Name": "HS10DE2G", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=103100", "Product Standard Ace Form": "FS-WI-1157", "Machine": "HS03", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1951", "Solution Link": "https://neogen.pscace.com/project/record/view?id=80369", "Machine Link": "https://neogen.pscace.com/project/record/view?id=103099", "BR #": "FS-FRM-2179", "CODE": "HQ", "VOL CODE": "F", "Combined": "HQF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002107", "WIP": "43780010112", "Item Name": "HS10DE2G", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=103100", "Product Standard Ace Form": "FS-WI-1157", "Machine": "HS04", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1951", "Solution Link": "https://neogen.pscace.com/project/record/view?id=80369", "Machine Link": "https://neogen.pscace.com/project/record/view?id=103099", "BR #": "FS-FRM-2179", "CODE": "HQ", "VOL CODE": "F", "Combined": "HQF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002107", "WIP": "43780010112", "Item Name": "HS10DE2G", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=105153", "Product Standard Ace Form": "FS-WI-1163", "Machine": "HSMA", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1951", "Solution Link": "https://neogen.pscace.com/project/record/view?id=80369", "Machine Link": "https://neogen.pscace.com/project/record/view?id=105154", "BR #": "FS-FRM-2208", "CODE": "HQ", "VOL CODE": "F", "Combined": "HQF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002206", "WIP": "43780010138", "Item Name": "HS10LET2G", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=79253", "Product Standard Ace Form": "FS-WI-1043", "Machine": "HS01", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1796", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72872", "Machine Link": "https://neogen.pscace.com/project/record/view?id=79252", "BR #": "FS-FRM-1932", "CODE": "HR", "VOL CODE": "F", "Combined": "HRF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002206", "WIP": "43780010138", "Item Name": "HS10LET2G", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=79253", "Product Standard Ace Form": "FS-WI-1043", "Machine": "HS03", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1796", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72872", "Machine Link": "https://neogen.pscace.com/project/record/view?id=79252", "BR #": "FS-FRM-1932", "CODE": "HR", "VOL CODE": "F", "Combined": "HRF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002206", "WIP": "43780010138", "Item Name": "HS10LET2G", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=79253", "Product Standard Ace Form": "FS-WI-1043", "Machine": "HS04", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1796", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72872", "Machine Link": "https://neogen.pscace.com/project/record/view?id=79252", "BR #": "FS-FRM-1932", "CODE": "HR", "VOL CODE": "F", "Combined": "HRF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002206", "WIP": "43780010138", "Item Name": "HS10LET2G", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=103763", "Product Standard Ace Form": "FS-WI-1159", "Machine": "HSMA", "Labels": "200 case/800 pouch", "Placards": "(10) ORANGE", "# Solns": "8", "Solution": "FS-FRM-1796", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72872", "Machine Link": "https://neogen.pscace.com/project/record/view?id=103762", "BR #": "FS-FRM-2197", "CODE": "HR", "VOL CODE": "F", "Combined": "HRF", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002042", "WIP": "N/A", "Item Name": "USDAKIT025", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=119631&layout=main&set=0", "Product Standard Ace Form": "FS-WI-1271", "Machine": "HS01", "Labels": "300", "Placards": "(10) PURPLE", "# Solns": "0", "Solution": "N/A", "Solution Link": "", "Machine Link": "https://neogen.pscace.com/project/record/view?id=119632", "BR #": "FS-FRM-2274", "CODE": "HT", "VOL CODE": "G", "Combined": "HTG", "EXPIRATION (MONTHS)": ""}, {"SAP #": "700002042", "WIP": "N/A", "Item Name": "USDAKIT025", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=119631&layout=main&set=0", "Product Standard Ace Form": "FS-WI-1271", "Machine": "HS03", "Labels": "300", "Placards": "(10) PURPLE", "# Solns": "0", "Solution": "N/A", "Solution Link": "", "Machine Link": "https://neogen.pscace.com/project/record/view?id=119632", "BR #": "FS-FRM-2274", "CODE": "HT", "VOL CODE": "G", "Combined": "HTG", "EXPIRATION (MONTHS)": ""}, {"SAP #": "700002042", "WIP": "N/A", "Item Name": "USDAKIT025", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=119631&layout=main&set=0", "Product Standard Ace Form": "FS-WI-1271", "Machine": "HS04", "Labels": "300", "Placards": "(10) PURPLE", "# Solns": "0", "Solution": "N/A", "Solution Link": "", "Machine Link": "https://neogen.pscace.com/project/record/view?id=119632", "BR #": "FS-FRM-2274", "CODE": "HT", "VOL CODE": "G", "Combined": "HTG", "EXPIRATION (MONTHS)": ""}, {"SAP #": "700002008", "WIP": "43780009247", "Item Name": "BPPFV9BFD", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=81112&layout=main&set=0", "Product Standard Ace Form": "FS-WI-1065", "Machine": "MFT1", "Labels": "300", "Placards": "(5) PURPLE", "# Solns": "5", "Solution": "FS-FRM-1958", "Solution Link": "https://neogen.pscace.com/project/record/view?id=81130", "Machine Link": "https://neogen.pscace.com/project/record/view?id=81113", "BR #": "FS-FRM-1957", "CODE": "MA", "VOL CODE": "E", "Combined": "MAE", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002055", "WIP": "43780009262", "Item Name": "BPPFV9BPW", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=79926&layout=main&set=0", "Product Standard Ace Form": "FS-WI-1056", "Machine": "MFT1", "Labels": "300", "Placards": "(5) ORANGE", "# Solns": "10", "Solution": "FS-FRM-1944", "Solution Link": "https://neogen.pscace.com/project/record/view?id=79867", "Machine Link": "https://neogen.pscace.com/project/record/view?id=79929", "BR #": "FS-FRM-1946", "CODE": "MB", "VOL CODE": "E", "Combined": "MBE", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002016", "WIP": "43780009908", "Item Name": "BPPFV9MRD", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=79168&layout=main&set=0", "Product Standard Ace Form": "FS-WI-1042", "Machine": "MFT1", "Labels": "300", "Placards": "(5) ORANGE", "# Solns": "10", "Solution": "FS-FRM-1930", "Solution Link": "https://neogen.pscace.com/project/record/view?id=79154", "Machine Link": "https://neogen.pscace.com/project/record/view?id=79170", "BR #": "FS-FRM-1931", "CODE": "MC", "VOL CODE": "E", "Combined": "MCE", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002064", "WIP": "43780009197", "Item Name": "BPPFV10DE", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=100649&layout=main&set=0", "Product Standard Ace Form": "FS-WI-1146", "Machine": "MFT1", "Labels": "300", "Placards": "(5) ORANGE", "# Solns": "10", "Solution": "FS-FRM-2112", "Solution Link": "https://neogen.pscace.com/project/record/view?id=99216", "Machine Link": "https://neogen.pscace.com/project/record/view?id=100439", "BR #": "FS-FRM-2123", "CODE": "MD", "VOL CODE": "F", "Combined": "MDF", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002047", "WIP": "43780009916", "Item Name": "BPPFV9LB", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=79311&layout=main&set=0", "Product Standard Ace Form": "FS-WI-1046", "Machine": "MFT1", "Labels": "300", "Placards": "(5) ORANGE", "# Solns": "10", "Solution": "FS-FRM-1806", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72943", "Machine Link": "https://neogen.pscace.com/project/record/view?id=79313", "BR #": "FS-FRM-1935", "CODE": "ME", "VOL CODE": "E", "Combined": "MEE", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002051", "WIP": "43780009189", "Item Name": "BPPFV10BPW", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=79898&layout=main&set=0", "Product Standard Ace Form": "FS-WI-1054", "Machine": "MFT1", "Labels": "300", "Placards": "(5) ORANGE", "# Solns": "10", "Solution": "FS-FRM-1944", "Solution Link": "https://neogen.pscace.com/project/record/view?id=79867", "Machine Link": "https://neogen.pscace.com/project/record/view?id=79897", "BR #": "FS-FRM-1945", "CODE": "MF", "VOL CODE": "F", "Combined": "MFF", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002044", "WIP": "43780009205", "Item Name": "BPPFV10LB", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=73305&layout=main&set=0", "Product Standard Ace Form": "FS-WI-0922", "Machine": "MFT1", "Labels": "300", "Placards": "(5) ORANGE", "# Solns": "10", "Solution": "FS-FRM-1806", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72943", "Machine Link": "https://neogen.pscace.com/project/record/view?id=72944", "BR #": "FS-FRM-1807", "CODE": "MG", "VOL CODE": "F", "Combined": "MGF", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002680", "WIP": "43780009213", "Item Name": "BPPFV10NB", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=74316&layout=main&set=0", "Product Standard Ace Form": "FS-WI-0995", "Machine": "MFT1", "Labels": "300", "Placards": "(5) PURPLE", "# Solns": "10", "Solution": "FS-FRM-1879", "Solution Link": "https://neogen.pscace.com/project/record/view?id=75513", "Machine Link": "https://neogen.pscace.com/project/record/view?id=74312", "BR #": "FS-FRM-1859", "CODE": "MH", "VOL CODE": "F", "Combined": "MHF", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002017", "WIP": "N/A", "Item Name": "3004", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=62314&layout=main&set=1", "Product Standard Ace Form": "FS-WI-0780", "Machine": "PA01", "Labels": "150", "Placards": "(5) PURPLE", "# Solns": "N/A", "Solution": "N/A", "Solution Link": "", "Machine Link": "https://neogen.pscace.com/project/record/view?id=62265", "BR #": "FS-FRM-1686", "CODE": "PA", "VOL CODE": "A", "Combined": "PAA", "EXPIRATION (MONTHS)": ""}, {"SAP #": "700002197", "WIP": "N/A", "Item Name": "3006", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=73399", "Product Standard Ace Form": "FS-WI-0979", "Machine": "PA01", "Labels": "150", "Placards": "(5) PURPLE", "# Solns": "N/A", "Solution": "N/A", "Solution Link": "", "Machine Link": "https://neogen.pscace.com/project/record/view?id=72595", "BR #": "FS-FRM-1794", "CODE": "PB", "VOL CODE": "A", "Combined": "PBA", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002027", "WIP": "N/A", "Item Name": "3007", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=62319&layout=main&set=1", "Product Standard Ace Form": "FS-WI-0785", "Machine": "PA01", "Labels": "150", "Placards": "(5) PURPLE", "# Solns": "N/A", "Solution": "N/A", "Solution Link": "", "Machine Link": "https://neogen.pscace.com/project/record/view?id=62270", "BR #": "FS-FRM-1691", "CODE": "PC", "VOL CODE": "A", "Combined": "PCA", "EXPIRATION (MONTHS)": "60"}, {"SAP #": "700002018", "WIP": "N/A", "Item Name": "3008", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=62320&layout=main&set=2", "Product Standard Ace Form": "FS-WI-0786", "Machine": "PA01", "Labels": "150", "Placards": "(5) PURPLE", "# Solns": "N/A", "Solution": "N/A", "Solution Link": "", "Machine Link": "https://neogen.pscace.com/project/record/view?id=62271", "BR #": "FS-FRM-1692", "CODE": "PD", "VOL CODE": "A", "Combined": "PDA", "EXPIRATION (MONTHS)": "60"}, {"SAP #": "700002041", "WIP": "43780010476", "Item Name": "USDA100", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=73299&layout=main&set=0", "Product Standard Ace Form": "FS-WI-0916", "Machine": "PA01", "Labels": "150", "Placards": "(5) PURPLE", "# Solns": "N/A", "Solution": "N/A", "Solution Link": "", "Machine Link": "https://neogen.pscace.com/project/record/view?id=72938", "BR #": "FS-FRM-1801", "CODE": "PE", "VOL CODE": "A", "Combined": "PEA", "EXPIRATION (MONTHS)": "60"}, {"SAP #": "700002045", "WIP": "43780010468", "Item Name": "USDA050", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=73298", "Product Standard Ace Form": "FS-WI-0915", "Machine": "PA01", "Labels": "150", "Placards": "(5) PURPLE", "# Solns": "N/A", "Solution": "N/A", "Solution Link": "", "Machine Link": "https://neogen.pscace.com/project/record/view?id=72913", "BR #": "FS-FRM-1800", "CODE": "PF", "VOL CODE": "A", "Combined": "PFA", "EXPIRATION (MONTHS)": "60"}, {"SAP #": "700002015", "WIP": "N/A", "Item Name": "XSL008", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=81257&layout=main&set=0", "Product Standard Ace Form": "FS-WI-1068", "Machine": "PA01", "Labels": "150", "Placards": "(5) PURPLE", "# Solns": "N/A", "Solution": "N/A", "Solution Link": "", "Machine Link": "https://neogen.pscace.com/project/record/view?id=81256", "BR #": "FS-FRM-1960", "CODE": "PG", "VOL CODE": "A", "Combined": "PGA", "EXPIRATION (MONTHS)": ""}, {"SAP #": "N/A", "WIP": "43780028254", "Item Name": "Welded Sponge Stick", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=80720", "Product Standard Ace Form": "FS-WI-1063", "Machine": "HS02", "Labels": "20", "Placards": "N/A", "# Solns": "N/A", "Solution": "N/A", "Solution Link": "", "Machine Link": "https://neogen.pscace.com/project/record/view?id=80721", "BR #": "FS-FRM-1955", "CODE": "PI", "VOL CODE": "A", "Combined": "PIA", "EXPIRATION (MONTHS)": "60"}, {"SAP #": "N/A", "WIP": "43780028255", "Item Name": "Welded Sponge Stick", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=73306", "Product Standard Ace Form": "FS-WI-0923", "Machine": "Welders", "Labels": "20", "Placards": "N/A", "# Solns": "N/A", "Solution": "N/A", "Solution Link": "", "Machine Link": "https://neogen.pscace.com/project/record/view?id=73418", "BR #": "FS-FRM-1840", "CODE": "PI", "VOL CODE": "A", "Combined": "PIA", "EXPIRATION (MONTHS)": "60"}, {"SAP #": "700002262", "WIP": "43780010260", "Item Name": "QDBFD225F", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=73406&layout=main&set=0", "Product Standard Ace Form": "FS-WI-0986", "Machine": "BR01", "Labels": "440 Case/1760 Pouch", "Placards": "(10) PURPLE", "# Solns": "10", "Solution": "FS-FRM-1687", "Solution Link": "https://neogen.pscace.com/project/record/view?id=62266", "Machine Link": "https://neogen.pscace.com/project/record/view?id=62267", "BR #": "FS-FRM-1688", "CODE": "QA", "VOL CODE": "K", "Combined": "QAK", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002038", "WIP": "43780010286", "Item Name": "QDBFD225", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=62311&layout=main&set=1", "Product Standard Ace Form": "FS-WI-0777", "Machine": "BR01", "Labels": "440 Case/1760 Pouch", "Placards": "(10) PURPLE", "# Solns": "10", "Solution": "FS-FRM-1687", "Solution Link": "https://neogen.pscace.com/project/record/view?id=62266", "Machine Link": "https://neogen.pscace.com/project/record/view?id=62262", "BR #": "FS-FRM-1683", "CODE": "QB", "VOL CODE": "K", "Combined": "QBK", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002258", "WIP": "43780010310", "Item Name": "QEBPW225F", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=75329&layout=main&set=0", "Product Standard Ace Form": "FS-WI-1000", "Machine": "BR01", "Labels": "440 Case/1760 Pouch", "Placards": "(10) ORANGE", "# Solns": "10", "Solution": "FS-FRM-1793", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72594", "Machine Link": "https://neogen.pscace.com/project/record/view?id=75303", "BR #": "FS-FRM-1873", "CODE": "QC", "VOL CODE": "K", "Combined": "QCK", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002013", "WIP": "43780010328", "Item Name": "QEBPW225", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=73293", "Product Standard Ace Form": "FS-WI-0910", "Machine": "BR01", "Labels": "440 Case/1760 Pouch", "Placards": "(10) ORANGE", "# Solns": "10", "Solution": "FS-FRM-1793", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72594", "Machine Link": "https://neogen.pscace.com/project/record/view?id=73422", "BR #": "FS-FRM-1841", "CODE": "QD", "VOL CODE": "K", "Combined": "QDK", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002065", "WIP": "43780010385", "Item Name": "QETSB225", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=78613&layout=main&set=0", "Product Standard Ace Form": "FS-WI-1035", "Machine": "BR01", "Labels": "440 Case/1760 Pouch", "Placards": "(10) ORANGE", "# Solns": "10", "Solution": "FS-FRM-1915", "Solution Link": "https://neogen.pscace.com/project/record/view?id=78600", "Machine Link": "https://neogen.pscace.com/project/record/view?id=78612", "BR #": "FS-FRM-1917", "CODE": "QF", "VOL CODE": "K", "Combined": "QFK", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002068", "WIP": "43780010302", "Item Name": "QDBFD99", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=80228&layout=main&set=0", "Product Standard Ace Form": "FS-WI-1059", "Machine": "BR01", "Labels": "440 Case/2200 Pouch", "Placards": "(10) PURPLE", "# Solns": "10", "Solution": "FS-FRM-1938", "Solution Link": "https://neogen.pscace.com/project/record/view?id=79369", "Machine Link": "https://neogen.pscace.com/project/record/view?id=80227", "BR #": "FS-FRM-1950", "CODE": "QG", "VOL CODE": "I", "Combined": "QGI", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002067", "WIP": "43780010294", "Item Name": "QDBFD450", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=73303&layout=main&set=0", "Product Standard Ace Form": "FS-WI-0920", "Machine": "BR01", "Labels": "440 Case/1760 Pouch", "Placards": "(10) PURPLE", "# Solns": "10", "Solution": "FS-FRM-1804", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72941", "Machine Link": "https://neogen.pscace.com/project/record/view?id=72942", "BR #": "FS-FRM-1805", "CODE": "QH", "VOL CODE": "M", "Combined": "QHM", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002254", "WIP": "43780021119", "Item Name": "QEBPWIS225", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=73296&layout=main&set=0", "Product Standard Ace Form": "FS-WI-0913", "Machine": "BR01", "Labels": "440 Case/1760 Pouch", "Placards": "(10) YELLOW", "# Solns": "10", "Solution": "FS-FRM-1839", "Solution Link": "https://neogen.pscace.com/project/record/view?id=73416", "Machine Link": "https://neogen.pscace.com/project/record/view?id=72907", "BR #": "FS-FRM-1798", "CODE": "QI", "VOL CODE": "K", "Combined": "QIK", "EXPIRATION (MONTHS)": "24"}, {"SAP #": "700002156", "WIP": "43780027967", "Item Name": "QEBPWI225F", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=81235&layout=main&set=0", "Product Standard Ace Form": "FS-WI-1067", "Machine": "BR01", "Labels": "440 Case/1760 Pouch", "Placards": "(10) YELLOW", "# Solns": "10", "Solution": "FS-FRM-1839", "Solution Link": "https://neogen.pscace.com/project/record/view?id=73416", "Machine Link": "https://neogen.pscace.com/project/record/view?id=81237", "BR #": "FS-FRM-1959", "CODE": "QJ", "VOL CODE": "K", "Combined": "QJK", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002043", "WIP": "43780010492", "Item Name": "USDA25BFD", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=89745&layout=main&set=0", "Product Standard Ace Form": "FS-WI-1108", "Machine": "HSMA", "Labels": "300", "Placards": "(5) PURPLE", "# Solns": "10", "Solution": "FS-FRM-2061", "Solution Link": "https://neogen.pscace.com/project/record/view?id=88658", "Machine Link": "https://neogen.pscace.com/project/record/view?id=89746", "BR #": "FS-FRM-2069", "CODE": "QL", "VOL CODE": "G", "Combined": "QLG", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002048", "WIP": "43780010500", "Item Name": "USDA25BPW", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=88175", "Product Standard Ace Form": "FS-WI-1098", "Machine": "BR01", "Labels": "300", "Placards": "(5) ORANGE", "# Solns": "10", "Solution": "FS-FRM-1802", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72939", "Machine Link": "https://neogen.pscace.com/project/record/view?id=88014", "BR #": "FS-FRM-2058", "CODE": "QM", "VOL CODE": "G", "Combined": "QMG", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002106", "WIP": "43780010708", "Item Name": "RS96010BPW", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=113683", "Product Standard Ace Form": "FS-WI-1185", "Machine": "HSMA", "Labels": "300", "Placards": "ORANGE", "# Solns": "10", "Solution": "FS-FRM-1933", "Solution Link": "https://neogen.pscace.com/project/record/view?id=79258", "Machine Link": "https://neogen.pscace.com/project/record/view?id=113684", "BR #": "FS-FRM-2246", "CODE": "SB", "VOL CODE": "F", "Combined": "SBF", "EXPIRATION (MONTHS)": "18"}, {"SAP #": "700002106", "WIP": "43780010708", "Item Name": "RS96010BPW", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=79264", "Product Standard Ace Form": "FS-WI-1045", "Machine": "ESS1", "Labels": "300", "Placards": "(5) ORANGE", "# Solns": "10", "Solution": "FS-FRM-1933", "Solution Link": "https://neogen.pscace.com/project/record/view?id=79258", "Machine Link": "https://neogen.pscace.com/project/record/view?id=79263", "BR #": "FS-FRM-1934", "CODE": "SB", "VOL CODE": "F", "Combined": "SBF", "EXPIRATION (MONTHS)": "18"}, {"SAP #": "700002282", "WIP": "43780096533", "Item Name": "ENVSWB100", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=95697", "Product Standard Ace Form": "FS-WI-1133", "Machine": "HSMA", "Labels": "150", "Placards": "(5) YELLOW", "# Solns": "12", "Solution": "FS-FRM-2011", "Solution Link": "https://neogen.pscace.com/project/record/view?id=83941", "Machine Link": "https://neogen.pscace.com/project/record/view?id=96230", "BR #": "FS-FRM-2101", "CODE": "SD", "VOL CODE": "B", "Combined": "SDB", "EXPIRATION (MONTHS)": "18"}, {"SAP #": "700002014", "WIP": "43780010716", "Item Name": "RS96010DE", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=108038&layout=main&set=0", "Product Standard Ace Form": "FS-WI-1175", "Machine": "ESS1", "Labels": "300", "Placards": "(5) ORANGE", "# Solns": "10", "Solution": "FS-FRM-2112", "Solution Link": "https://neogen.pscace.com/project/record/view?id=99216", "Machine Link": "https://neogen.pscace.com/project/record/view?id=108039", "BR #": "FS-FRM-2226", "CODE": "SI", "VOL CODE": "F", "Combined": "SIF", "EXPIRATION (MONTHS)": "18"}, {"SAP #": "700002039", "WIP": "43780010724", "Item Name": "RS96010LET", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=112726", "Product Standard Ace Form": "FS-WI-1182", "Machine": "HSMA", "Labels": "300", "Placards": "(5) ORANGE", "# Solns": "10", "Solution": "FS-FRM-1806", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72943", "Machine Link": "https://neogen.pscace.com/project/record/view?id=112725", "BR #": "FS-FRM-2241", "CODE": "SA", "VOL CODE": "F", "Combined": "SAF", "EXPIRATION (MONTHS)": "18"}, {"SAP #": "700002039", "WIP": "43780010724", "Item Name": "RS96010LET", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=75497", "Product Standard Ace Form": "FS-WI-1008", "Machine": "ESS1", "Labels": "300", "Placards": "(5) ORANGE", "# Solns": "10", "Solution": "FS-FRM-1806", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72943", "Machine Link": "https://neogen.pscace.com/project/record/view?id=75499", "BR #": "FS-FRM-1877", "CODE": "SA", "VOL CODE": "F", "Combined": "SAF", "EXPIRATION (MONTHS)": "18"}, {"SAP #": "700002040", "WIP": "43780010732", "Item Name": "RS96010NB", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=106530", "Product Standard Ace Form": "FS-WI-1169", "Machine": "HSMA", "Labels": "300", "Placards": "(5) PURPLE", "# Solns": "10", "Solution": "FS-FRM-1936", "Solution Link": "https://neogen.pscace.com/project/record/view?id=79322", "Machine Link": "https://neogen.pscace.com/project/record/view?id=106531", "BR #": "FS-FRM-2215", "CODE": "SC", "VOL CODE": "F", "Combined": "SCF", "EXPIRATION (MONTHS)": "18"}, {"SAP #": "700002040", "WIP": "43780010732", "Item Name": "RS96010NB", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=79409", "Product Standard Ace Form": "FS-WI-1049", "Machine": "ESS1", "Labels": "300", "Placards": "(5) PURPLE", "# Solns": "10", "Solution": "FS-FRM-1936", "Solution Link": "https://neogen.pscace.com/project/record/view?id=79322", "Machine Link": "https://neogen.pscace.com/project/record/view?id=79395", "BR #": "FS-FRM-1939", "CODE": "SC", "VOL CODE": "F", "Combined": "SCF", "EXPIRATION (MONTHS)": "18"}, {"SAP #": "700002009", "WIP": "43780010757", "Item Name": "RS9601LET", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=107435", "Product Standard Ace Form": "FS-WI-1170", "Machine": "HSMA", "Labels": "300", "Placards": "(5) ORANGE", "# Solns": "10", "Solution": "FS-FRM-1806", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72943", "Machine Link": "https://neogen.pscace.com/project/record/view?id=107437", "BR #": "FS-FRM-2218", "CODE": "SE", "VOL CODE": "B", "Combined": "SEB", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002009", "WIP": "43780010757", "Item Name": "RS9601LET", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=78990", "Product Standard Ace Form": "FS-WI-1038", "Machine": "ESS1", "Labels": "300", "Placards": "(5) ORANGE", "# Solns": "10", "Solution": "FS-FRM-1806", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72943", "Machine Link": "https://neogen.pscace.com/project/record/view?id=78987", "BR #": "FS-FRM-1927", "CODE": "SE", "VOL CODE": "B", "Combined": "SEB", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002010", "WIP": "43780010765", "Item Name": "RS9604LET", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=106062", "Product Standard Ace Form": "FS-WI-1165", "Machine": "HSMA", "Labels": "300", "Placards": "(5) ORANGE", "# Solns": "10", "Solution": "FS-FRM-1806", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72943", "Machine Link": "https://neogen.pscace.com/project/record/view?id=106075", "BR #": "FS-FRM-2210", "CODE": "SF", "VOL CODE": "C", "Combined": "SFC", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002282", "WIP": "43780096533", "Item Name": "ENVSWB100", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=95697", "Product Standard Ace Form": "FS-WI-1133", "Machine": "BR01", "Labels": "150", "Placards": "(5) YELLOW", "# Solns": "12", "Solution": "FS-FRM-2011", "Solution Link": "https://neogen.pscace.com/project/record/view?id=83941", "Machine Link": "https://neogen.pscace.com/project/record/view?id=96230", "BR #": "FS-FRM-2101", "CODE": "SD", "VOL CODE": "B", "Combined": "SDB", "EXPIRATION (MONTHS)": "18"}, {"SAP #": "700002282", "WIP": "43780096533", "Item Name": "ENVSWB100", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=84129", "Product Standard Ace Form": "FS-WI-1080", "Machine": "ESS1", "Labels": "150", "Placards": "(5) YELLOW", "# Solns": "12", "Solution": "FS-FRM-2011", "Solution Link": "https://neogen.pscace.com/project/record/view?id=83941", "Machine Link": "https://neogen.pscace.com/project/record/view?id=84130", "BR #": "FS-FRM-2015", "CODE": "SD", "VOL CODE": "B", "Combined": "SDB", "EXPIRATION (MONTHS)": "18"}, {"SAP #": "700002010", "WIP": "43780010765", "Item Name": "RS9604LET", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=78498", "Product Standard Ace Form": "FS-WI-1032", "Machine": "ESS1", "Labels": "300", "Placards": "(5) ORANGE", "# Solns": "10", "Solution": "FS-FRM-1806", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72943", "Machine Link": "https://neogen.pscace.com/project/record/view?id=78514", "BR #": "FS-FRM-1913", "CODE": "SF", "VOL CODE": "C", "Combined": "SFC", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002011", "WIP": "43780010773", "Item Name": "RS9604NB", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=108018", "Product Standard Ace Form": "FS-WI-1174", "Machine": "HSMA", "Labels": "300", "Placards": "(5) PURPLE", "# Solns": "10", "Solution": "FS-FRM-1936", "Solution Link": "https://neogen.pscace.com/project/record/view?id=79322", "Machine Link": "https://neogen.pscace.com/project/record/view?id=108017", "BR #": "FS-FRM-2225", "CODE": "SH", "VOL CODE": "C", "Combined": "SHC", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002011", "WIP": "43780010773", "Item Name": "RS9604NB", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=80206", "Product Standard Ace Form": "FS-WI-1058", "Machine": "ESS1", "Labels": "300", "Placards": "(5) PURPLE", "# Solns": "10", "Solution": "FS-FRM-1936", "Solution Link": "https://neogen.pscace.com/project/record/view?id=79322", "Machine Link": "https://neogen.pscace.com/project/record/view?id=80207", "BR #": "FS-FRM-1949", "CODE": "SH", "VOL CODE": "C", "Combined": "SHC", "EXPIRATION (MONTHS)": "12"}, {"SAP #": "700002012", "WIP": "43780010781", "Item Name": "RS9605LET", "Product Standard Link": "https://neogen.pscace.com/project/record/view?id=78419&layout=main&set=1", "Product Standard Ace Form": "FS-WI-1031", "Machine": "ESS1", "Labels": "300", "Placards": "(5) ORANGE", "# Solns": "10", "Solution": "FS-FRM-1806", "Solution Link": "https://neogen.pscace.com/project/record/view?id=72943", "Machine Link": "https://neogen.pscace.com/project/record/view?id=78418", "BR #": "FS-FRM-1912", "CODE": "SG", "VOL CODE": "D", "Combined": "SGD", "EXPIRATION (MONTHS)": "12"}];
+// ── Label reference table (from Label_verifyer.csv) ──
+// SAP# -> item name, machines it runs on, whether it has pouch labels, shelf life
+const LABEL_DB = [
+  {sap:"700002322",name:"FTBFD9960",   machine:"BAM1",hasPouch:false},
+  {sap:"700002321",name:"FTPHB9960",   machine:"BAM1",hasPouch:false},
+  {sap:"700002320",name:"FTPW9960",    machine:"BAM1",hasPouch:false},
+  {sap:"700002327",name:"FTBFD9060",   machine:"BAM1",hasPouch:false},
+  {sap:"700002326",name:"FTBPW9060",   machine:"BAM1",hasPouch:false},
+  {sap:"700002323",name:"FTPW9060",    machine:"BAM1",hasPouch:false},
+  {sap:"700002324",name:"FTBPWI9060",  machine:"BAM1",hasPouch:false},
+  {sap:"700002330",name:"FTPHB9060",   machine:"BAM1",hasPouch:false},
+  {sap:"700002329",name:"BRBFD40030",  machine:"BAM2",hasPouch:false},
+  {sap:"700002325",name:"BRBPW40030",  machine:"BAM2",hasPouch:false},
+  {sap:"700002322",name:"FTBFD9960",   machine:"BAM2",hasPouch:false},
+  {sap:"700002321",name:"FTPHB9960",   machine:"BAM2",hasPouch:false},
+  {sap:"700002320",name:"FTPW9960",    machine:"BAM2",hasPouch:false},
+  {sap:"700002327",name:"FTBFD9060",   machine:"BAM2",hasPouch:false},
+  {sap:"700002326",name:"FTBPW9060",   machine:"BAM2",hasPouch:false},
+  {sap:"700002323",name:"FTPW9060",    machine:"BAM2",hasPouch:false},
+  {sap:"700002324",name:"FTBPWI9060",  machine:"BAM2",hasPouch:false},
+  {sap:"700002330",name:"FTPHB9060",   machine:"BAM2",hasPouch:false},
+  {sap:"700002108",name:"SSL10LET2G",  machine:"HS01",hasPouch:true},
+  {sap:"700002108",name:"SSL10LET2G",  machine:"HS03",hasPouch:true},
+  {sap:"700002108",name:"SSL10LET2G",  machine:"HS04",hasPouch:true},
+  {sap:"700002108",name:"SSL10LET2G",  machine:"HSMA",hasPouch:true},
+  {sap:"700002002",name:"HS10NB2G",    machine:"HS01",hasPouch:true},
+  {sap:"700002002",name:"HS10NB2G",    machine:"HS03",hasPouch:true},
+  {sap:"700002002",name:"HS10NB2G",    machine:"HS04",hasPouch:true},
+  {sap:"700002002",name:"HS10NB2G",    machine:"HSMA",hasPouch:true},
+  {sap:"700002213",name:"HS10NB",      machine:"HS01",hasPouch:true},
+  {sap:"700002213",name:"HS10NB",      machine:"HS03",hasPouch:true},
+  {sap:"700002213",name:"HS10NB",      machine:"HS04",hasPouch:true},
+  {sap:"700002213",name:"HS10NB",      machine:"HSMA",hasPouch:true},
+  {sap:"700002205",name:"HS10LET",     machine:"HS01",hasPouch:true},
+  {sap:"700002205",name:"HS10LET",     machine:"HS03",hasPouch:true},
+  {sap:"700002205",name:"HS10LET",     machine:"HS04",hasPouch:true},
+  {sap:"700002205",name:"HS10LET",     machine:"HSMA",hasPouch:true},
+  {sap:"700002338",name:"ESS10WSN",    machine:"HS01",hasPouch:true},
+  {sap:"700002338",name:"ESS10WSN",    machine:"HS03",hasPouch:true},
+  {sap:"700002338",name:"ESS10WSN",    machine:"HS04",hasPouch:true},
+  {sap:"700002338",name:"ESS10WSN",    machine:"HSMA",hasPouch:true},
+  {sap:"700002202",name:"SSL10BPW",    machine:"HS01",hasPouch:true},
+  {sap:"700002202",name:"SSL10BPW",    machine:"HS03",hasPouch:true},
+  {sap:"700002202",name:"SSL10BPW",    machine:"HS04",hasPouch:true},
+  {sap:"700002202",name:"SSL10BPW",    machine:"HSMA",hasPouch:true},
+  {sap:"700002212",name:"HS10BPW2G",   machine:"HS01",hasPouch:true},
+  {sap:"700002212",name:"HS10BPW2G",   machine:"HS03",hasPouch:true},
+  {sap:"700002212",name:"HS10BPW2G",   machine:"HS04",hasPouch:true},
+  {sap:"700002212",name:"HS10BPW2G",   machine:"HSMA",hasPouch:true},
+  {sap:"700002024",name:"BP133ES",     machine:"HS01",hasPouch:true},
+  {sap:"700002024",name:"BP133ES",     machine:"HS03",hasPouch:true},
+  {sap:"700002024",name:"BP133ES",     machine:"HS04",hasPouch:true},
+  {sap:"700002024",name:"BP133ES",     machine:"HSMA",hasPouch:true},
+  {sap:"700002337",name:"HES10WSN2G",  machine:"HS01",hasPouch:true},
+  {sap:"700002337",name:"HES10WSN2G",  machine:"HS03",hasPouch:true},
+  {sap:"700002337",name:"HES10WSN2G",  machine:"HS04",hasPouch:true},
+  {sap:"700002337",name:"HES10WSN2G",  machine:"HSMA",hasPouch:true},
+  {sap:"700002109",name:"SSL10LET",    machine:"HS01",hasPouch:true},
+  {sap:"700002109",name:"SSL10LET",    machine:"HS03",hasPouch:true},
+  {sap:"700002109",name:"SSL10LET",    machine:"HS04",hasPouch:true},
+  {sap:"700002109",name:"SSL10LET",    machine:"HS02",hasPouch:true},
+  {sap:"700002109",name:"SSL10LET",    machine:"HSMA",hasPouch:true},
+  {sap:"700002201",name:"SSL100",      machine:"HS01",hasPouch:true},
+  {sap:"700002201",name:"SSL100",      machine:"HS03",hasPouch:true},
+  {sap:"700002201",name:"SSL100",      machine:"HS04",hasPouch:true},
+  {sap:"700002201",name:"SSL100",      machine:"HS02",hasPouch:true},
+  {sap:"700002201",name:"SSL100",      machine:"HSMA",hasPouch:true},
+  {sap:"700002076",name:"SSL10DE",     machine:"HS01",hasPouch:true},
+  {sap:"700002076",name:"SSL10DE",     machine:"HS03",hasPouch:true},
+  {sap:"700002076",name:"SSL10DE",     machine:"HS04",hasPouch:true},
+  {sap:"700002076",name:"SSL10DE",     machine:"HS02",hasPouch:true},
+  {sap:"700002076",name:"SSL10DE",     machine:"HSMA",hasPouch:true},
+  {sap:"700002025",name:"BP237SPG",    machine:"HS01",hasPouch:true},
+  {sap:"700002025",name:"BP237SPG",    machine:"HS03",hasPouch:true},
+  {sap:"700002025",name:"BP237SPG",    machine:"HS04",hasPouch:true},
+  {sap:"700002025",name:"BP237SPG",    machine:"HSMA",hasPouch:true},
+  {sap:"700002004",name:"SSL10NB2G",   machine:"HS01",hasPouch:true},
+  {sap:"700002004",name:"SSL10NB2G",   machine:"HS03",hasPouch:true},
+  {sap:"700002004",name:"SSL10NB2G",   machine:"HS04",hasPouch:true},
+  {sap:"700002004",name:"SSL10NB2G",   machine:"HSMA",hasPouch:true},
+  {sap:"700002003",name:"SSL10NB",     machine:"HS01",hasPouch:true},
+  {sap:"700002003",name:"SSL10NB",     machine:"HS03",hasPouch:true},
+  {sap:"700002003",name:"SSL10NB",     machine:"HS04",hasPouch:true},
+  {sap:"700002003",name:"SSL10NB",     machine:"BR01",hasPouch:true},
+  {sap:"700002003",name:"SSL10NB",     machine:"HSMA",hasPouch:true},
+  {sap:"700002003",name:"SSL10NB",     machine:"HS02",hasPouch:true},
+  {sap:"700002204",name:"HS10BPW",     machine:"HS01",hasPouch:true},
+  {sap:"700002204",name:"HS10BPW",     machine:"HS03",hasPouch:true},
+  {sap:"700002204",name:"HS10BPW",     machine:"HS04",hasPouch:true},
+  {sap:"700002204",name:"HS10BPW",     machine:"HSMA",hasPouch:true},
+  {sap:"700002107",name:"HS10DE2G",    machine:"HS01",hasPouch:true},
+  {sap:"700002107",name:"HS10DE2G",    machine:"HS03",hasPouch:true},
+  {sap:"700002107",name:"HS10DE2G",    machine:"HS04",hasPouch:true},
+  {sap:"700002107",name:"HS10DE2G",    machine:"HSMA",hasPouch:true},
+  {sap:"700002206",name:"HS10LET2G",   machine:"HS01",hasPouch:true},
+  {sap:"700002206",name:"HS10LET2G",   machine:"HS03",hasPouch:true},
+  {sap:"700002206",name:"HS10LET2G",   machine:"HS04",hasPouch:true},
+  {sap:"700002206",name:"HS10LET2G",   machine:"HSMA",hasPouch:true},
+  {sap:"700002042",name:"USDAKIT025",  machine:"HS01",hasPouch:false},
+  {sap:"700002042",name:"USDAKIT025",  machine:"HS03",hasPouch:false},
+  {sap:"700002042",name:"USDAKIT025",  machine:"HS04",hasPouch:false},
+  {sap:"700002008",name:"BPPFV9BFD",   machine:"MFT1",hasPouch:false},
+  {sap:"700002055",name:"BPPFV9BPW",   machine:"MFT1",hasPouch:false},
+  {sap:"700002016",name:"BPPFV9MRD",   machine:"MFT1",hasPouch:false},
+  {sap:"700002064",name:"BPPFV10DE",   machine:"MFT1",hasPouch:false},
+  {sap:"700002047",name:"BPPFV9LB",    machine:"MFT1",hasPouch:false},
+  {sap:"700002051",name:"BPPFV10BPW",  machine:"MFT1",hasPouch:false},
+  {sap:"700002044",name:"BPPFV10LB",   machine:"MFT1",hasPouch:false},
+  {sap:"700007680",name:"BPPFV10NB",   machine:"MFT1",hasPouch:false},
+  {sap:"700002017",name:"3004",        machine:"PA01",hasPouch:false},
+  {sap:"700002197",name:"30063M",      machine:"PA01",hasPouch:false},
+  {sap:"700002027",name:"3007",        machine:"PA01",hasPouch:false},
+  {sap:"700002018",name:"3008",        machine:"PA01",hasPouch:false},
+  {sap:"700002041",name:"USDA100",     machine:"PA01",hasPouch:false},
+  {sap:"700002045",name:"USDA050",     machine:"PA01",hasPouch:false},
+  {sap:"700002015",name:"XSL008",      machine:"PA01",hasPouch:false},
+  {sap:"N/A",      name:"Welded Sponge Stick",machine:"HS02",  hasPouch:false},
+  {sap:"N/A",      name:"Welded Sponge Stick",machine:"Welders",hasPouch:false},
+  {sap:"700002262",name:"QDBFD225F",   machine:"BR01",hasPouch:true},
+  {sap:"700002038",name:"QDBFD225",    machine:"BR01",hasPouch:true},
+  {sap:"700002258",name:"QEBPW225F",   machine:"BR01",hasPouch:true},
+  {sap:"700002013",name:"QEBPW225",    machine:"BR01",hasPouch:true},
+  {sap:"700002065",name:"QETSB225",    machine:"BR01",hasPouch:true},
+  {sap:"700002068",name:"QDBFD99",     machine:"BR01",hasPouch:true},
+  {sap:"700002067",name:"QDBFD450",    machine:"BR01",hasPouch:true},
+  {sap:"700002254",name:"QEBPWIS225",  machine:"BR01",hasPouch:true},
+  {sap:"700002156",name:"QEBPWI225F",  machine:"BR01",hasPouch:true},
+  {sap:"700002043",name:"USDA25BFD",   machine:"HSMA",hasPouch:false},
+  {sap:"700002048",name:"USDA25BPW",   machine:"BR01",hasPouch:false},
+  {sap:"700002106",name:"RS96010BPW",  machine:"HSMA",hasPouch:false},
+  {sap:"700002106",name:"RS96010BPW",  machine:"ESS1",hasPouch:false},
+  {sap:"700002014",name:"RS96010DE",   machine:"HSMA",hasPouch:false},
+  {sap:"700002282",name:"100 Enviro",  machine:"HSMA",hasPouch:false},
+  {sap:"700002014",name:"RS96010DE",   machine:"ESS1",hasPouch:false},
+  {sap:"700002039",name:"RS96010LET",  machine:"HSMA",hasPouch:false},
+  {sap:"700002039",name:"RS96010LET",  machine:"ESS1",hasPouch:false},
+  {sap:"700002040",name:"RS96010NB",   machine:"HSMA",hasPouch:false},
+  {sap:"700002040",name:"RS96010NB",   machine:"ESS1",hasPouch:false},
+  {sap:"700002009",name:"RS9601LET",   machine:"HSMA",hasPouch:false},
+  {sap:"700002009",name:"RS9601LET",   machine:"ESS1",hasPouch:false},
+  {sap:"700002010",name:"RS9604LET",   machine:"HSMA",hasPouch:false},
+  {sap:"700002282",name:"100 Enviro",  machine:"BR01",hasPouch:false},
+  {sap:"700002282",name:"100 Enviro",  machine:"ESS1",hasPouch:false},
+  {sap:"700002010",name:"RS9604LET",   machine:"ESS1",hasPouch:false},
+  {sap:"700002011",name:"RS9604NB",    machine:"HSMA",hasPouch:false},
+  {sap:"700002011",name:"RS9604NB",    machine:"ESS1",hasPouch:false},
+  {sap:"700002012",name:"RS9605LET",   machine:"HSMA",hasPouch:false},
+  {sap:"700002012",name:"RS9605LET",   machine:"ESS1",hasPouch:false},
+];
 
-// ──────────────────────────────────────────────
-//  BUILD LOOKUP INDEX
-// ──────────────────────────────────────────────
-// byCode[combined] = array of rows (one per unique machine)
-const byCode = {};
-for (const r of MBR_DATA) {
-  if (!byCode[r.Combined]) byCode[r.Combined] = [];
-  // Deduplicate by machine
-  if (!byCode[r.Combined].some(x => x.Machine === r.Machine)) {
-    byCode[r.Combined].push(r);
+// ── SAP # → Expected shelf life in months (from MBRv1.csv) ──
+const SAP_SHELF_LIFE = {
+  "700002322":24,"700002321":24,"700002320":24,"700002327":24,
+  "700002326":24,"700002323":24,"700002324":24,"700002330":24,
+  "700002329":12,"700002325":12,
+  "700002108":12,"700002002":12,"700002213":12,
+  "700002205":12,"700002338":15,"700002202":12,"700002212":12,
+  "700002024":60,"700002337":15,"700002109":12,"700002201":60,
+  "700002076":12,"700002025":12,"700002004":12,"700002003":12,
+  "700002204":12,"700002107":12,"700002206":12,"700002042":0,
+  "700002008":24,"700002055":24,"700002016":24,"700002064":24,
+  "700002047":24,"700002051":24,"700002044":24,"700007680":24,
+  "700002262":24,"700002038":24,"700002258":24,"700002013":24,
+  "700002065":24,"700002068":24,"700002067":24,"700002254":24,
+  "700002156":12,"700002043":12,"700002048":12,
+  "700002106":18,"700002282":18,"700002014":18,"700002039":18,
+  "700002040":18,"700002009":12,"700002010":12,"700002011":12,
+  "700002012":12
+};
+
+// ── Derive unique machine list from LABEL_DB ──
+const ALL_MACHINES = [...new Set(LABEL_DB.map(r => r.machine))].sort();
+
+// Returns the month difference between two YYYY-MM-DD dates
+function monthsBetween(mfgISO, expISO) {
+  if (!mfgISO || !expISO) return null;
+  const mfg = new Date(mfgISO);
+  const exp = new Date(expISO);
+  if (isNaN(mfg) || isNaN(exp)) return null;
+  return (exp.getFullYear() - mfg.getFullYear()) * 12 + (exp.getMonth() - mfg.getMonth());
+}
+
+// ── Reference data for machines with baked-in daily run data ──
+const CSV_MACHINES = [
+  {
+    machine:"BAM1", lot:"FE0317261H", mfgDate:"2026-03-17", expDate:"2028-03-17",
+    caseWeb:"https://www.neogen.com/insert-search",
+    caseUnique:"{{item=700002326;lot=FE0317261H;expire=2028-03-17;ndes=FLIP-TOP DILUTION BOTTLE W/ BUFFERED PEPTONE WATER;nweb=https://www.neogen.com}}",
+    pouchWeb:"", pouchUnique:""
+  },
+  {
+    machine:"BR01", lot:"QD0314261K", mfgDate:"2026-03-14", expDate:"2028-03-14",
+    caseWeb:"https://www.neogen.com/insert-search",
+    caseUnique:"{{item=700002013;lot=QD0314261K;expire=2028-03-14;ndes=Enrichment Pouch with 225 mL Buffered Peptone Water;nweb=https://www.neogen.com}}",
+    pouchWeb:"https://www.neogen.com/insert-search",
+    pouchUnique:"{{item=Enrichment Pouch with 225mL Buffered Peptone Water Broth;lot=QD0314261K;expire=2028-03-14;ndes=0;nweb=https://www.neogen.com}}"
   }
-}
+];
 
-// ──────────────────────────────────────────────
-//  DOM REFS
-// ──────────────────────────────────────────────
-const combinedInput    = document.getElementById('combinedInput');
-const mbrStatus        = document.getElementById('mbrStatus');
-const machineChips     = document.getElementById('machineChips');
-const prefixInput      = document.getElementById('prefix');
-const bodyInput        = document.getElementById('body');
-const machineSelect    = document.getElementById('machine');
-const expirationInput  = document.getElementById('expiration');
-const convertedExpInput= document.getElementById('convertedExp');
-const previewDiv       = document.getElementById('preview');
-const lotDisplayMain   = document.getElementById('lotDisplayMain');
-const copyNotice       = document.getElementById('copyNotice');
-const listTextarea     = document.getElementById('list');
-const calendarInput    = document.getElementById('calendar');
-const controlledDocSelect = document.getElementById('controlledDoc');
-const productNameInput = document.getElementById('productName');
-const wipInput         = document.getElementById('wip');
-const wipConfirmInput  = document.getElementById('wipConfirm');
-const productNumInput  = document.getElementById('productNum');
-const productNumConfirmInput = document.getElementById('productNumConfirm');
-const colorSelect      = document.getElementById('color');
-const colorAmountInput = document.getElementById('colorAmount');
-const reorderButton    = document.getElementById('reorderButton');
-const suffixToggle     = document.getElementById('suffixToggle');
+let pouchEnabled = false;
+let reference = null;
+let selectedMachine = null;
+let selectedProduct = null; // LABEL_DB row
 
-let isReordered = false;
-let originalList = '';
-let activeMbrRow = null; // currently selected MBR row
-
-// ──────────────────────────────────────────────
-//  HELPERS
-// ──────────────────────────────────────────────
-function parsePlacard(placard) {
-  if (!placard || placard === 'N/A') return { color: '', amount: '' };
-  const p = placard.toUpperCase();
-  let color = '';
-  if (p.includes('PURPLE')) color = 'Purple';
-  else if (p.includes('ORANGE')) color = 'Orange';
-  else if (p.includes('YELLOW')) color = 'Yellow';
-  const match = placard.match(/\((\d+)\)/);
-  const amount = match ? match[1] : '';
-  return { color, amount };
-}
-
-function setAutoFill(el, value) {
-  el.value = value;
-  el.classList.add('autofilled');
-  setTimeout(() => el.classList.remove('autofilled'), 1800);
-}
-
-function clearAutoFields() {
-  [productNameInput, wipInput, wipConfirmInput, productNumInput, productNumConfirmInput,
-   expirationInput, colorAmountInput].forEach(el => el.value = '');
-  colorSelect.value = '';
-  machineSelect.value = '';
-  activeMbrRow = null;
-}
-
-// ──────────────────────────────────────────────
-//  FILL FROM A SPECIFIC MBR ROW
-// ──────────────────────────────────────────────
-function applyMbrRow(row) {
-  activeMbrRow = row;
-
-  // Prefix = Combined code
-  prefixInput.value = row.Combined;
-
-  // Machine
-  machineSelect.value = row.Machine;
-  setAutoFill(machineSelect, row.Machine);
-
-  // Product Name
-  setAutoFill(productNameInput, row['Item Name'] || '');
-
-  // WIP (both fields)
-  const wip = row.WIP === 'N/A' ? '' : row.WIP;
-  setAutoFill(wipInput, wip);
-  setAutoFill(wipConfirmInput, wip);
-
-  // Product # / SAP
-  const sap = row['SAP #'] === 'N/A' ? '' : row['SAP #'];
-  setAutoFill(productNumInput, sap);
-  setAutoFill(productNumConfirmInput, sap);
-
-  // Expiration months
-  const expMo = row['EXPIRATION (MONTHS)'] || '';
-  setAutoFill(expirationInput, expMo);
-
-  // Placard color + amount
-  const { color, amount } = parsePlacard(row.Placards);
-  colorSelect.value = color;
-  setAutoFill(colorAmountInput, amount);
-
-  // Auto-convert expiration if date is already set
-  if (calendarInput.value && expMo) convertExpiration();
-
-  updatePreview();
-  validateFields();
-}
-
-// ──────────────────────────────────────────────
-//  MBR LOOKUP LOGIC
-// ──────────────────────────────────────────────
-combinedInput.addEventListener('input', function () {
-  const code = this.value.trim().toUpperCase();
-  this.value = code;
-  machineChips.innerHTML = '';
-
-  if (code.length < 3) {
-    mbrStatus.className = 'empty';
-    mbrStatus.textContent = code.length === 0 ? 'Enter 3-letter code' : `${3 - code.length} more letter(s)…`;
-    clearAutoFields();
-    prefixInput.value = '';
-    updatePreview();
-    return;
-  }
-
-  const matches = byCode[code];
-  if (!matches) {
-    mbrStatus.className = 'notfound';
-    mbrStatus.textContent = `"${code}" not found in MBR`;
-    clearAutoFields();
-    prefixInput.value = code;
-    updatePreview();
-    return;
-  }
-
-  prefixInput.value = code;
-
-  if (matches.length === 1) {
-    mbrStatus.className = 'found';
-    mbrStatus.textContent = `✔ ${matches[0]['Item Name']} — ${matches[0].Machine}`;
-    applyMbrRow(matches[0]);
-  } else {
-    // Multiple machines — show chips
-    mbrStatus.className = 'multi';
-    mbrStatus.textContent = `${matches.length} machines — pick one:`;
-    matches.forEach(row => {
-      const chip = document.createElement('button');
-      chip.type = 'button';
-      chip.className = 'machine-chip';
-      chip.textContent = row.Machine;
-      chip.title = `${row.Placards}  |  Labels: ${row.Labels}`;
-      chip.addEventListener('click', () => {
-        document.querySelectorAll('.machine-chip').forEach(c => c.classList.remove('active'));
-        chip.classList.add('active');
-        mbrStatus.className = 'found';
-        mbrStatus.textContent = `✔ ${row['Item Name']} — ${row.Machine}`;
-        applyMbrRow(row);
-      });
-      machineChips.appendChild(chip);
-    });
-    // Auto-apply first and highlight it
-    applyMbrRow(matches[0]);
-    machineChips.firstChild.classList.add('active');
-  }
+// ── Populate machine select ──
+const sel = document.getElementById('machineSelect');
+ALL_MACHINES.forEach(m => {
+  const opt = document.createElement('option');
+  opt.value = m; opt.textContent = m;
+  sel.appendChild(opt);
 });
 
-// ──────────────────────────────────────────────
-//  DATE / EXPIRATION
-// ──────────────────────────────────────────────
-function getBatchSuffix() { return suffixToggle.checked ? '2' : '1'; }
+sel.addEventListener('change', () => {
+  const machine = sel.value;
+  const productSel = document.getElementById('productSelect');
+  const productBar = document.getElementById('product-bar');
+  const infoBar = document.getElementById('product-info-bar');
 
-function formatDateToMMDDYY(dateStr) {
-  const [year, month, day] = dateStr.split('-');
-  return `${month.padStart(2,'0')}${day.padStart(2,'0')}${year.slice(-2)}`;
-}
+  // Clear downstream
+  productSel.innerHTML = '<option value="">— Select product —</option>';
+  selectedProduct = null;
+  infoBar.style.display = 'none';
+  reference = null;
+  selectedMachine = machine || null;
+  resetFields();
 
-function updateBodyField() {
-  if (calendarInput.value) {
-    bodyInput.value = formatDateToMMDDYY(calendarInput.value) + getBatchSuffix();
-    updatePreview();
-    // Auto-convert if expiration months already filled
-    if (expirationInput.value) convertExpiration();
-  }
-}
+  if (!machine) { productBar.style.display = 'none'; return; }
 
-calendarInput.addEventListener('change', updateBodyField);
-suffixToggle.addEventListener('change', updateBodyField);
-
-function convertExpiration() {
-  const calendarValue = calendarInput.value;
-  const monthsToAdd = parseInt(expirationInput.value, 10);
-  if (!calendarValue || isNaN(monthsToAdd)) return;
-  const [year, month, day] = calendarValue.split('-').map(Number);
-  const baseDate = new Date(year, month - 1, day);
-  const originalDay = baseDate.getDate();
-  baseDate.setMonth(baseDate.getMonth() + monthsToAdd);
-  if (baseDate.getDate() < originalDay) baseDate.setDate(0);
-  const yyyy = baseDate.getFullYear();
-  const mm = String(baseDate.getMonth() + 1).padStart(2, '0');
-  const dd = String(baseDate.getDate()).padStart(2, '0');
-  convertedExpInput.value = `${yyyy}-${mm}-${dd}`;
-  updatePreview();
-}
-
-// ──────────────────────────────────────────────
-//  PREVIEW
-// ──────────────────────────────────────────────
-function getLotData() {
-  const rawPrefix  = prefixInput.value.trim().toUpperCase();
-  const body       = bodyInput.value.trim();
-  const expiration = convertedExpInput.value.trim();
-  const expMonths  = expirationInput.value.trim();
-  const cd         = controlledDocSelect.value;
-  const prefixMain = rawPrefix.substring(0, 2);
-  const suffixFromPrefix = rawPrefix.length >= 3 ? rawPrefix.charAt(2) : '';
-  const lot        = `${prefixMain}${body}${suffixFromPrefix}`;
-  const machine    = machineSelect.value;
-  const productName= productNameInput.value.trim();
-  const wip        = wipInput.value.trim();
-  const productNum = productNumInput.value.trim();
-  const color      = colorSelect.value.trim();
-  const colorAmount= colorAmountInput.value.trim();
-  const lotDate    = calendarInput.value || '';
-  return { lot, machine, expiration, expMonths, cd, productName, wip, productNum, color, colorAmount, lotDate };
-}
-
-function updatePreview() {
-  const d = getLotData();
-  if (d.lot && d.lot.length > 4 && d.machine) {
-    previewDiv.textContent =
-      `LOT: ${d.lot}\n` +
-      `Machine: ${d.machine}    Exp: ${d.expMonths ? d.expMonths+'mo' : '—'}    ${d.expiration || '—'}\n` +
-      `Product: ${d.productName || '—'}    WIP: ${d.wip || '—'}    SAP: ${d.productNum || '—'}\n` +
-      `Color: ${d.color || '—'}    Placards: ${d.colorAmount || '—'}\n` +
-      `Controlled Doc: ${d.cd || '—'}`;
-    lotDisplayMain.textContent = `LOT #: ${d.lot}`;
-  } else {
-    previewDiv.textContent = '';
-    lotDisplayMain.textContent = '';
-  }
-}
-
-// ──────────────────────────────────────────────
-//  ADD TO LIST
-// ──────────────────────────────────────────────
-function addToList() {
-  const d = getLotData();
-
-  if (wipInput.value.trim() !== wipConfirmInput.value.trim()) {
-    alert('WIP entries do not match.'); return;
-  }
-  if (productNumInput.value.trim() !== productNumConfirmInput.value.trim()) {
-    alert('Product # entries do not match.'); return;
-  }
-  if (!d.lot || d.lot.length < 5) {
-    alert('Please enter a valid prefix and select a date.'); return;
-  }
-
-  listTextarea.value +=
-    `${d.lot}\t${d.machine}\tExp: ${d.expMonths}mo\t${d.expiration}\t${d.cd}\t${d.productName}\t${d.wip}\t${d.productNum}\t${d.color}\t${d.colorAmount}\t${d.lotDate}\n`;
-
-  previewDiv.textContent = '✔️ Added to list';
-  lotDisplayMain.textContent = '';
-  combinedInput.value = '';
-  mbrStatus.className = 'empty';
-  mbrStatus.textContent = 'Enter 3-letter code';
-  machineChips.innerHTML = '';
-  clearAutoFields();
-  prefixInput.value = '';
-  bodyInput.value = '';
-  calendarInput.value = '';
-  convertedExpInput.value = '';
-  controlledDocSelect.value = '';
-  validateFields();
-}
-
-// ──────────────────────────────────────────────
-//  COPY / REORDER / CLEAR
-// ──────────────────────────────────────────────
-function copyList() {
-  listTextarea.select();
-  document.execCommand('copy');
-}
-
-function reorderList() {
-  if (!isReordered) {
-    originalList = listTextarea.value.trim();
-    if (!originalList) return;
-    const lines = originalList.split('\n');
-    const reordered = lines.map(line => {
-      const p = line.split('\t');
-      const lot=p[0]||'', expMo=p[2]||'', expDate=p[3]||'', productName=p[5]||'',
-            wip=p[6]||'', productNum=p[7]||'', color=p[8]||'', colorAmt=p[9]||'',
-            lotDate=p[10]||'';
-      return `${productName}\t${wip}\t${productNum}\t${lot}\t${expDate}\t${expMo}\t${color}\t${colorAmt}\t${lotDate}`;
-    });
-    listTextarea.value = reordered.join('\n');
-    isReordered = true;
-    reorderButton.textContent = 'Restore Original Order';
-    reorderButton.classList.add('active');
-  } else {
-    listTextarea.value = originalList;
-    isReordered = false;
-    reorderButton.textContent = 'Placard Order';
-    reorderButton.classList.remove('active');
-  }
-}
-
-function clearAll() {
-  combinedInput.value = '';
-  mbrStatus.className = 'empty';
-  mbrStatus.textContent = 'Enter 3-letter code';
-  machineChips.innerHTML = '';
-  clearAutoFields();
-  prefixInput.value = '';
-  bodyInput.value = '';
-  calendarInput.value = '';
-  expirationInput.value = '';
-  convertedExpInput.value = '';
-  controlledDocSelect.value = '';
-  previewDiv.textContent = '';
-  lotDisplayMain.textContent = '';
-  validateFields();
-}
-
-// ──────────────────────────────────────────────
-//  LOT DISPLAY COPY
-// ──────────────────────────────────────────────
-document.getElementById('lotDisplay').addEventListener('click', () => {
-  const text = lotDisplayMain.textContent.trim();
-  if (text) {
-    navigator.clipboard.writeText(text).then(() => {
-      copyNotice.style.display = 'block';
-      setTimeout(() => copyNotice.style.display = 'none', 1200);
-    });
-  }
-});
-
-// ──────────────────────────────────────────────
-//  VALIDATION
-// ──────────────────────────────────────────────
-function validateFields() {
-  document.querySelectorAll('input, select, textarea').forEach(el => {
-    if (el.hasAttribute('readonly') || el.type === 'checkbox' || el.type === 'date') return;
-    if (!el.value.trim()) {
-      el.classList.add('invalid'); el.classList.remove('valid');
-    } else {
-      el.classList.add('valid'); el.classList.remove('invalid');
-    }
+  // Populate products for this machine
+  const rows = LABEL_DB.filter(r => r.machine === machine);
+  rows.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.sap + '|' + r.name;
+    opt.textContent = r.name + (r.sap !== 'N/A' ? '  (' + r.sap + ')' : '');
+    productSel.appendChild(opt);
   });
-}
-
-document.querySelectorAll('input, select').forEach(el => {
-  el.addEventListener('input', () => { updatePreview(); validateFields(); });
-  el.addEventListener('change', () => { updatePreview(); validateFields(); });
+  productBar.style.display = 'flex';
 });
 
-validateFields();
-updatePreview();
+document.getElementById('productSelect').addEventListener('change', function() {
+  const val = this.value;
+  const infoBar = document.getElementById('product-info-bar');
+  if (!val) {
+    selectedProduct = null;
+    infoBar.style.display = 'none';
+    reference = null;
+    resetFields();
+    return;
+  }
+
+  const [sap, name] = val.split('|');
+  selectedProduct = LABEL_DB.find(r => r.sap === sap && r.name === name && r.machine === sel.value);
+
+  // Set reference from CSV_MACHINES if available
+  const refRow = CSV_MACHINES.find(r => r.machine === sel.value);
+  reference = (refRow && refRow.lot) ? refRow : null;
+
+  // Show info bar
+  const shelfMo = SAP_SHELF_LIFE[sap];
+  document.getElementById('info-sap').textContent = sap;
+  document.getElementById('info-shelf').textContent = shelfMo != null ? shelfMo + ' months' : 'N/A';
+  document.getElementById('info-labels').textContent = selectedProduct ? (selectedProduct.hasPouch ? 'Case + Pouch' : 'Case only') : '—';
+  document.getElementById('info-pouch-flag').textContent = selectedProduct && selectedProduct.hasPouch ? 'YES ✓' : 'NO';
+  infoBar.style.display = 'flex';
+
+  // Auto-set pouch toggle based on product data
+  if (selectedProduct && selectedProduct.hasPouch) {
+    pouchEnabled = true;
+    document.getElementById('pouchToggle').classList.add('on');
+    document.getElementById('pouch-fields').style.display = 'block';
+  } else {
+    pouchEnabled = false;
+    document.getElementById('pouchToggle').classList.remove('on');
+    document.getElementById('pouch-fields').style.display = 'none';
+  }
+  updateBadge('pouch', pouchEnabled ? 'PENDING' : 'SKIPPED');
+  resetFields();
+});
+
+// ── Pouch toggle (manual override) ──
+function togglePouch() {
+  pouchEnabled = !pouchEnabled;
+  document.getElementById('pouchToggle').classList.toggle('on', pouchEnabled);
+  document.getElementById('pouch-fields').style.display = pouchEnabled ? 'block' : 'none';
+  updateBadge('pouch', pouchEnabled ? 'PENDING' : 'SKIPPED');
+  clearPouchFields();
+  evaluate();
+}
+
+function clearPouchFields() {
+  ['pouch-web','pouch-unique'].forEach(id => {
+    const el = document.getElementById(id);
+    el.value = ''; el.className = '';
+  });
+  setStatus('pouch-web',''); setStatus('pouch-unique','');
+  document.getElementById('pouch-parsed').innerHTML = '<span style="color:var(--muted);font-family:var(--mono);font-size:11px;">parsed data will appear here after scan</span>';
+  evaluate();
+}
+
+// ── Parse the {{...}} QR format ──
+function parseQR(raw) {
+  const result = {};
+  if (!raw) return result;
+  const inner = raw.match(/\{\{([\s\S]*?)\}\}/);
+  const src = inner ? inner[1] : raw;
+  src.split(';').forEach(pair => {
+    const [k, ...v] = pair.split('=');
+    if (k) result[k.trim()] = v.join('=').trim();
+  });
+  return result;
+}
+
+// ── Normalise dates to YYYY-MM-DD ──
+function normaliseDate(d) {
+  if (!d) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d.trim())) return d.trim();
+  const m = d.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) return `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
+  return d.trim().toLowerCase();
+}
+
+// ── Status helpers ──
+function setStatus(fieldId, state) {
+  const el = document.getElementById('st-' + fieldId);
+  if (!el) return;
+  if (state === 'pass') el.textContent = '✓';
+  else if (state === 'fail') el.textContent = '✗';
+  else el.textContent = '○';
+  el.style.color = state === 'pass' ? 'var(--pass)' : state === 'fail' ? 'var(--fail)' : 'var(--muted)';
+}
+
+function markInput(id, state) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('pass','fail','warn');
+  if (state) el.classList.add(state);
+}
+
+function updateBadge(section, text, state) {
+  const el = document.getElementById('badge-' + section);
+  if (!el) return;
+  el.textContent = text || 'PENDING';
+  el.className = 'section-badge';
+  if (state) el.classList.add(state);
+}
+
+// ── Render parsed chips ──
+function renderChips(containerId, parsed, lotRef, expRef) {
+  const el = document.getElementById(containerId);
+  if (!parsed || !Object.keys(parsed).length) {
+    el.innerHTML = '<span style="color:var(--muted);font-family:var(--mono);font-size:11px;">parsed data will appear here after scan</span>';
+    return;
+  }
+  el.innerHTML = Object.entries(parsed).map(([k,v]) => {
+    let cls = '';
+    if (k === 'lot') cls = (lotRef && v === lotRef) ? 'highlight-lot' : 'mismatch';
+    else if (k === 'expire') {
+      const match = expRef && normaliseDate(v) === normaliseDate(expRef);
+      cls = match ? 'highlight-exp' : 'mismatch';
+    }
+    return `<span class="chip ${cls}"><span class="chip-key">${k}=</span><span class="chip-val">${v}</span></span>`;
+  }).join('');
+}
+
+// ── Main evaluation ──
+function evaluate() {
+  let allPass = true;
+  const lot = document.getElementById('br-lot').value.trim();
+  const mfg = document.getElementById('br-mfg').value.trim();
+  const exp = document.getElementById('br-exp').value.trim();
+  const caseWeb = document.getElementById('case-web').value.trim();
+  const caseUnique = document.getElementById('case-unique').value.trim();
+  const pouchWeb = document.getElementById('pouch-web').value.trim();
+  const pouchUnique = document.getElementById('pouch-unique').value.trim();
+
+  // ── Batch record checks ──
+  let batchOk = true;
+  if (lot) {
+    const ok = !reference || lot === reference.lot;
+    markInput('br-lot', ok ? 'pass' : 'fail'); setStatus('br-lot', ok ? 'pass' : 'fail');
+    if (!ok) batchOk = false;
+  } else { markInput('br-lot',''); setStatus('br-lot',''); }
+
+  if (mfg) {
+    const ok = !reference || normaliseDate(mfg) === normaliseDate(reference.mfgDate);
+    markInput('br-mfg', ok ? 'pass' : 'fail'); setStatus('br-mfg', ok ? 'pass' : 'fail');
+    if (!ok) batchOk = false;
+  } else { markInput('br-mfg',''); setStatus('br-mfg',''); }
+
+  if (exp) {
+    const ok = !reference || normaliseDate(exp) === normaliseDate(reference.expDate);
+    markInput('br-exp', ok ? 'pass' : 'fail'); setStatus('br-exp', ok ? 'pass' : 'fail');
+    if (!ok) batchOk = false;
+  } else { markInput('br-exp',''); setStatus('br-exp',''); }
+
+  // ── Shelf life check ──
+  const caseUniqueRaw = document.getElementById('case-unique').value.trim();
+  const parsedForSAP = parseQR(caseUniqueRaw);
+  // Try SAP from selected product first, then fall back to QR item field
+  const sapNum = (selectedProduct && selectedProduct.sap !== 'N/A')
+    ? selectedProduct.sap
+    : (parsedForSAP.item ? parsedForSAP.item.replace(/\D/g,'').slice(0,9) : null);
+  const expectedMonths = sapNum ? (SAP_SHELF_LIFE[sapNum] ?? null) : null;
+  const shelfRow = document.getElementById('shelf-life-row');
+  const shelfNoSap = document.getElementById('shelf-no-sap');
+
+  if (mfg && exp) {
+    const computed = monthsBetween(normaliseDate(mfg), normaliseDate(exp));
+    if (expectedMonths !== null) {
+      shelfRow.style.display = 'block'; shelfNoSap.style.display = 'none';
+      const compEl = document.getElementById('shelf-computed');
+      const expEl = document.getElementById('shelf-expected');
+      const verdEl = document.getElementById('shelf-verdict');
+      compEl.textContent = computed !== null ? `${computed} months` : 'invalid dates';
+      expEl.textContent = `${expectedMonths} months`;
+      const ok = computed === expectedMonths;
+      compEl.style.color = ok ? 'var(--pass)' : 'var(--fail)';
+      verdEl.textContent = ok ? '✓ CORRECT' : '✗ MISMATCH';
+      verdEl.style.background = ok ? 'rgba(0,230,118,0.12)' : 'rgba(255,23,68,0.12)';
+      verdEl.style.color = ok ? 'var(--pass)' : 'var(--fail)';
+      if (!ok) batchOk = false;
+    } else {
+      shelfRow.style.display = 'none';
+      shelfNoSap.style.display = (selectedProduct && !caseUniqueRaw) ? 'block' : 'none';
+    }
+  } else {
+    shelfRow.style.display = 'none'; shelfNoSap.style.display = 'none';
+  }
+
+  const batchFilled = lot && mfg && exp;
+  updateBadge('batch', batchFilled ? (batchOk ? 'PASS' : 'FAIL') : 'PENDING', batchFilled ? (batchOk ? 'pass' : 'fail') : null);
+
+  // ── Case label checks ──
+  let caseOk = true;
+  const caseExpRef = reference ? reference.expDate : exp;
+  const caseLotRef = reference ? reference.lot : lot;
+
+  if (caseWeb) {
+    const ok = !reference || !reference.caseWeb || caseWeb === reference.caseWeb;
+    markInput('case-web', ok ? 'pass' : 'fail'); setStatus('case-web', ok ? 'pass' : 'fail');
+    if (!ok) caseOk = false;
+  } else { markInput('case-web',''); setStatus('case-web',''); }
+
+  if (caseUnique) {
+    const parsed = parseQR(caseUnique);
+    renderChips('case-parsed', parsed, caseLotRef, caseExpRef);
+    const lotMatch = lot ? parsed.lot === lot : (!reference || parsed.lot === caseLotRef);
+    const expMatch = exp ? normaliseDate(parsed.expire) === normaliseDate(exp) : (!reference || normaliseDate(parsed.expire) === normaliseDate(caseExpRef));
+    const ok = lotMatch && expMatch;
+    markInput('case-unique', ok ? 'pass' : 'fail'); setStatus('case-unique', ok ? 'pass' : 'fail');
+    if (!ok) caseOk = false;
+  } else { renderChips('case-parsed', null); markInput('case-unique',''); setStatus('case-unique',''); }
+
+  const caseFilled = caseWeb && caseUnique;
+  updateBadge('case', caseFilled ? (caseOk ? 'PASS' : 'FAIL') : 'PENDING', caseFilled ? (caseOk ? 'pass' : 'fail') : null);
+
+  // ── Pouch label checks ──
+  let pouchOk = true;
+  if (pouchEnabled) {
+    const pouchExpRef = reference ? reference.expDate : exp;
+    const pouchLotRef = reference ? reference.lot : lot;
+    if (pouchWeb) {
+      const ok = !reference || !reference.pouchWeb || pouchWeb === reference.pouchWeb;
+      markInput('pouch-web', ok ? 'pass' : 'fail'); setStatus('pouch-web', ok ? 'pass' : 'fail');
+      if (!ok) pouchOk = false;
+    } else { markInput('pouch-web',''); setStatus('pouch-web',''); }
+    if (pouchUnique) {
+      const parsed = parseQR(pouchUnique);
+      renderChips('pouch-parsed', parsed, pouchLotRef, pouchExpRef);
+      const lotMatch = lot ? parsed.lot === lot : (!reference || parsed.lot === pouchLotRef);
+      const expMatch = exp ? normaliseDate(parsed.expire) === normaliseDate(exp) : (!reference || normaliseDate(parsed.expire) === normaliseDate(pouchExpRef));
+      const ok = lotMatch && expMatch;
+      markInput('pouch-unique', ok ? 'pass' : 'fail'); setStatus('pouch-unique', ok ? 'pass' : 'fail');
+      if (!ok) pouchOk = false;
+    } else { renderChips('pouch-parsed', null); markInput('pouch-unique',''); setStatus('pouch-unique',''); }
+    const pouchFilled = pouchWeb && pouchUnique;
+    updateBadge('pouch', pouchFilled ? (pouchOk ? 'PASS' : 'FAIL') : 'PENDING', pouchFilled ? (pouchOk ? 'pass' : 'fail') : null);
+  }
+
+  // ── Summary ──
+  const anyFilled = batchFilled || caseFilled || (pouchEnabled && pouchWeb && pouchUnique);
+  const summaryEl = document.getElementById('summary');
+  if (!anyFilled) { summaryEl.classList.remove('visible'); return; }
+
+  summaryEl.classList.add('visible');
+  const list = document.getElementById('result-list');
+  const verdict = document.getElementById('final-verdict');
+  list.innerHTML = '';
+
+  const addRow = (label, state, note) => {
+    const row = document.createElement('div');
+    row.className = `result-row ${state}`;
+    row.innerHTML = `<span class="dot"></span><span>${label}${note ? ' — ' + note : ''}</span>`;
+    list.appendChild(row);
+    if (state === 'err') allPass = false;
+  };
+
+  if (batchFilled) {
+    const lotOk = !reference || lot === reference.lot;
+    const mfgOk = !reference || normaliseDate(mfg) === normaliseDate(reference.mfgDate);
+    const expOk = !reference || normaliseDate(exp) === normaliseDate(reference.expDate);
+    addRow('Batch Record Lot#', lotOk ? 'ok' : 'err', lotOk ? '' : 'does not match reference');
+    addRow('Batch Record Mfg Date', mfgOk ? 'ok' : 'err', mfgOk ? '' : 'does not match reference');
+    addRow('Batch Record Exp Date', expOk ? 'ok' : 'err', expOk ? '' : 'does not match reference');
+    if (expectedMonths !== null) {
+      const computed = monthsBetween(normaliseDate(mfg), normaliseDate(exp));
+      const shelfOk = computed === expectedMonths;
+      addRow(`Shelf Life (${computed} mo vs expected ${expectedMonths} mo)`, shelfOk ? 'ok' : 'err', shelfOk ? 'correct duration' : `off by ${Math.abs(computed - expectedMonths)} month(s)`);
+    }
+  }
+  if (caseFilled) {
+    const caseWebOk = !reference || !reference.caseWeb || caseWeb === reference.caseWeb;
+    addRow('Case Label — Website QR', caseWebOk ? 'ok' : 'err', caseWebOk ? 'scanned OK' : 'URL mismatch');
+    const cu = parseQR(caseUnique);
+    const clotOk = lot ? cu.lot === lot : true;
+    const cexpOk = exp ? normaliseDate(cu.expire) === normaliseDate(exp) : true;
+    addRow('Case Label — Lot# in QR', clotOk ? 'ok' : 'err', clotOk ? `lot=${cu.lot}` : `got ${cu.lot}, expected ${lot}`);
+    addRow('Case Label — Expire in QR', cexpOk ? 'ok' : 'err', cexpOk ? `expire=${cu.expire}` : `got ${cu.expire}, expected ${exp}`);
+  }
+  if (pouchEnabled && pouchWeb && pouchUnique) {
+    const pwOk = !reference || !reference.pouchWeb || pouchWeb === reference.pouchWeb;
+    addRow('Pouch Label — Website QR', pwOk ? 'ok' : 'err', pwOk ? 'scanned OK' : 'URL mismatch');
+    const pu = parseQR(pouchUnique);
+    const plotOk = lot ? pu.lot === lot : true;
+    const pexpOk = exp ? normaliseDate(pu.expire) === normaliseDate(exp) : true;
+    addRow('Pouch Label — Lot# in QR', plotOk ? 'ok' : 'err', plotOk ? `lot=${pu.lot}` : `got ${pu.lot}, expected ${lot}`);
+    addRow('Pouch Label — Expire in QR', pexpOk ? 'ok' : 'err', pexpOk ? `expire=${pu.expire}` : `got ${pu.expire}, expected ${exp}`);
+  } else if (!pouchEnabled) {
+    addRow('Pouch Label', 'skip', 'not applicable for this product');
+  }
+
+  verdict.textContent = allPass ? '✓ ALL CHECKS PASSED' : '✗ VERIFICATION FAILED — see above';
+  verdict.className = 'final-verdict ' + (allPass ? 'pass' : 'fail');
+}
+
+// ── Wire up all inputs ──
+['br-lot','br-mfg','br-exp','case-web','case-unique','pouch-web','pouch-unique'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', evaluate);
+});
+
+// ── Reset ──
+function resetFields() {
+  ['br-lot','br-mfg','br-exp','case-web','case-unique','pouch-web','pouch-unique'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.value = ''; el.className = ''; }
+  });
+  ['br-lot','br-mfg','br-exp','case-web','case-unique','pouch-web','pouch-unique'].forEach(id => setStatus(id,''));
+  ['batch','case'].forEach(s => updateBadge(s, 'PENDING'));
+  updateBadge('pouch', pouchEnabled ? 'PENDING' : 'SKIPPED');
+  ['case-parsed','pouch-parsed'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<span style="color:var(--muted);font-family:var(--mono);font-size:11px;">parsed data will appear here after scan</span>';
+  });
+  document.getElementById('shelf-life-row').style.display = 'none';
+  document.getElementById('shelf-no-sap').style.display = 'none';
+  document.getElementById('summary').classList.remove('visible');
+}
+
+function resetAll() {
+  sel.value = '';
+  document.getElementById('productSelect').innerHTML = '<option value="">— Select product —</option>';
+  document.getElementById('product-bar').style.display = 'none';
+  document.getElementById('product-info-bar').style.display = 'none';
+  reference = null;
+  selectedMachine = null;
+  selectedProduct = null;
+  pouchEnabled = false;
+  document.getElementById('pouchToggle').classList.remove('on');
+  document.getElementById('pouch-fields').style.display = 'none';
+  resetFields();
+}
 </script>
 </body>
 </html>
