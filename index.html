@@ -32,7 +32,6 @@
     overflow-x: hidden;
   }
 
-  /* Grid background */
   body::before {
     content: '';
     position: fixed;
@@ -53,7 +52,6 @@
     padding: 32px 20px 80px;
   }
 
-  /* ── Header ── */
   header {
     display: flex;
     align-items: flex-end;
@@ -92,7 +90,6 @@
     font-family: var(--mono);
   }
 
-  /* ── Machine selector ── */
   .machine-bar {
     display: flex;
     align-items: center;
@@ -125,7 +122,6 @@
 
   .machine-bar select:focus { border-color: var(--accent); }
 
-  /* ── Section cards ── */
   .section {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -186,7 +182,6 @@
     gap: 12px;
   }
 
-  /* ── Field rows ── */
   .field {
     display: grid;
     grid-template-columns: 160px 1fr auto;
@@ -234,7 +229,6 @@
     flex-shrink: 0;
   }
 
-  /* ── Parsed display ── */
   .parsed-chips {
     display: flex;
     flex-wrap: wrap;
@@ -254,6 +248,7 @@
     border-radius: 4px;
     display: flex;
     gap: 5px;
+    background: var(--surface2);
   }
 
   .chip .chip-key { color: var(--muted); }
@@ -261,9 +256,7 @@
   .chip.highlight-lot .chip-val { color: var(--pass); }
   .chip.highlight-exp .chip-val { color: #ff9800; }
   .chip.mismatch .chip-val { color: var(--fail); }
-  .chip { background: var(--surface2); }
 
-  /* ── Divider with label ── */
   .sub-label {
     font-family: var(--mono);
     font-size: 10px;
@@ -282,7 +275,6 @@
     background: var(--border);
   }
 
-  /* ── Summary banner ── */
   #summary {
     margin-top: 28px;
     padding: 18px 22px;
@@ -327,7 +319,6 @@
   .result-row.ok .dot { background: var(--pass); }
   .result-row.err .dot { background: var(--fail); }
   .result-row.skip .dot { background: var(--muted); }
-
   .result-row.ok { color: var(--pass); }
   .result-row.err { color: var(--fail); }
   .result-row.skip { color: var(--muted); }
@@ -346,7 +337,6 @@
   .final-verdict.pass { background: rgba(0,230,118,0.12); color: var(--pass); border: 1px solid rgba(0,230,118,0.3); }
   .final-verdict.fail { background: rgba(255,23,68,0.12); color: var(--fail); border: 1px solid rgba(255,23,68,0.3); }
 
-  /* ── Reset button ── */
   .btn-reset {
     display: block;
     margin: 20px auto 0;
@@ -365,7 +355,6 @@
 
   .btn-reset:hover { border-color: var(--accent); color: var(--accent); }
 
-  /* ── Pouch toggle ── */
   .toggle-row {
     display: flex;
     align-items: center;
@@ -408,7 +397,6 @@
 
   .toggle.on::after { left: 19px; }
 
-  /* responsive */
   @media (max-width: 600px) {
     .field { grid-template-columns: 1fr; }
     .field-label { margin-bottom: -4px; }
@@ -428,7 +416,6 @@
     </div>
   </header>
 
-  <!-- Machine + Product selector -->
   <div class="machine-bar">
     <label>Machine</label>
     <select id="machineSelect">
@@ -448,7 +435,7 @@
     <span style="color:var(--muted);">POUCH</span><span id="info-pouch-flag" style="color:var(--accent)"></span>
   </div>
 
-  <!-- ── SECTION 1: Batch Record Front Page ── -->
+  <!-- SECTION 1: Batch Record Front Page -->
   <div class="section" id="sec-batch">
     <div class="section-header">
       <div class="section-icon">📋</div>
@@ -462,6 +449,9 @@
         <span class="field-label">Lot Number</span>
         <input type="text" id="br-lot" placeholder="Scan or type lot barcode…" autocomplete="off" spellcheck="false">
         <span class="field-status" id="st-br-lot">○</span>
+      </div>
+      <div id="lot-decoded" style="display:none; font-family:var(--mono); font-size:11px; color:var(--muted); padding: 2px 0 4px 172px;">
+        ↳ encodes mfg date: <span id="lot-decoded-date" style="color:var(--accent)"></span>
       </div>
 
       <div class="field">
@@ -486,13 +476,13 @@
           <span id="shelf-verdict" style="font-family:var(--mono);font-size:12px;margin-left:auto;padding:3px 10px;border-radius:4px;"></span>
         </div>
       </div>
-      <div id="shelf-no-sap" style="display:none;font-family:var(--mono);font-size:11px;color:var(--muted);padding:8px 2px;">
-        ℹ Scan the case label unique QR to enable shelf life check
+      <div id="shelf-no-product" style="display:none;font-family:var(--mono);font-size:11px;color:var(--muted);padding:8px 2px;">
+        ℹ Select a product above to enable shelf life check
       </div>
     </div>
   </div>
 
-  <!-- ── SECTION 2: Case Label ── -->
+  <!-- SECTION 2: Case Label -->
   <div class="section" id="sec-case">
     <div class="section-header">
       <div class="section-icon">📦</div>
@@ -517,7 +507,7 @@
     </div>
   </div>
 
-  <!-- ── SECTION 3: Pouch Label (optional) ── -->
+  <!-- SECTION 3: Pouch Label (optional) -->
   <div class="section" id="sec-pouch">
     <div class="section-header">
       <div class="section-icon">🏷️</div>
@@ -548,7 +538,7 @@
     </div>
   </div>
 
-  <!-- ── Summary ── -->
+  <!-- Summary -->
   <div id="summary">
     <div class="summary-title">Verification Summary</div>
     <div class="result-list" id="result-list"></div>
@@ -560,8 +550,7 @@
 </div>
 
 <script>
-// ── Label reference table (from Label_verifyer.csv) ──
-// SAP# -> item name, machines it runs on, whether it has pouch labels, shelf life
+// ── Label reference table ──
 const LABEL_DB = [
   {sap:"700002322",name:"FTBFD9960",   machine:"BAM1",hasPouch:false},
   {sap:"700002321",name:"FTPHB9960",   machine:"BAM1",hasPouch:false},
@@ -710,7 +699,7 @@ const LABEL_DB = [
   {sap:"700002012",name:"RS9605LET",   machine:"ESS1",hasPouch:false},
 ];
 
-// ── SAP # → Expected shelf life in months (from MBRv1.csv) ──
+// SAP# → Expected shelf life in months
 const SAP_SHELF_LIFE = {
   "700002322":24,"700002321":24,"700002320":24,"700002327":24,
   "700002326":24,"700002323":24,"700002324":24,"700002330":24,
@@ -730,10 +719,8 @@ const SAP_SHELF_LIFE = {
   "700002012":12
 };
 
-// ── Derive unique machine list from LABEL_DB ──
 const ALL_MACHINES = [...new Set(LABEL_DB.map(r => r.machine))].sort();
 
-// Returns the month difference between two YYYY-MM-DD dates
 function monthsBetween(mfgISO, expISO) {
   if (!mfgISO || !expISO) return null;
   const mfg = new Date(mfgISO);
@@ -742,29 +729,22 @@ function monthsBetween(mfgISO, expISO) {
   return (exp.getFullYear() - mfg.getFullYear()) * 12 + (exp.getMonth() - mfg.getMonth());
 }
 
-// ── Reference data for machines with baked-in daily run data ──
-const CSV_MACHINES = [
-  {
-    machine:"BAM1", lot:"FE0317261H", mfgDate:"2026-03-17", expDate:"2028-03-17",
-    caseWeb:"https://www.neogen.com/insert-search",
-    caseUnique:"{{item=700002326;lot=FE0317261H;expire=2028-03-17;ndes=FLIP-TOP DILUTION BOTTLE W/ BUFFERED PEPTONE WATER;nweb=https://www.neogen.com}}",
-    pouchWeb:"", pouchUnique:""
-  },
-  {
-    machine:"BR01", lot:"QD0314261K", mfgDate:"2026-03-14", expDate:"2028-03-14",
-    caseWeb:"https://www.neogen.com/insert-search",
-    caseUnique:"{{item=700002013;lot=QD0314261K;expire=2028-03-14;ndes=Enrichment Pouch with 225 mL Buffered Peptone Water;nweb=https://www.neogen.com}}",
-    pouchWeb:"https://www.neogen.com/insert-search",
-    pouchUnique:"{{item=Enrichment Pouch with 225mL Buffered Peptone Water Broth;lot=QD0314261K;expire=2028-03-14;ndes=0;nweb=https://www.neogen.com}}"
-  }
-];
+// Returns true only if exp date is exactly N months after mfg date
+// i.e. same day-of-month, correct month offset
+function isExactShelfLife(mfgISO, expISO, expectedMonths) {
+  if (!mfgISO || !expISO || expectedMonths === null) return false;
+  const mfg = new Date(mfgISO);
+  const exp = new Date(expISO);
+  if (isNaN(mfg) || isNaN(exp)) return false;
+  const monthsMatch = monthsBetween(mfgISO, expISO) === expectedMonths;
+  const dayMatches  = mfg.getUTCDate() === exp.getUTCDate();
+  return monthsMatch && dayMatches;
+}
 
 let pouchEnabled = false;
-let reference = null;
-let selectedMachine = null;
-let selectedProduct = null; // LABEL_DB row
+let selectedProduct = null;
 
-// ── Populate machine select ──
+// Populate machine select
 const sel = document.getElementById('machineSelect');
 ALL_MACHINES.forEach(m => {
   const opt = document.createElement('option');
@@ -778,17 +758,13 @@ sel.addEventListener('change', () => {
   const productBar = document.getElementById('product-bar');
   const infoBar = document.getElementById('product-info-bar');
 
-  // Clear downstream
   productSel.innerHTML = '<option value="">— Select product —</option>';
   selectedProduct = null;
   infoBar.style.display = 'none';
-  reference = null;
-  selectedMachine = machine || null;
   resetFields();
 
   if (!machine) { productBar.style.display = 'none'; return; }
 
-  // Populate products for this machine
   const rows = LABEL_DB.filter(r => r.machine === machine);
   rows.forEach(r => {
     const opt = document.createElement('option');
@@ -805,7 +781,6 @@ document.getElementById('productSelect').addEventListener('change', function() {
   if (!val) {
     selectedProduct = null;
     infoBar.style.display = 'none';
-    reference = null;
     resetFields();
     return;
   }
@@ -813,11 +788,6 @@ document.getElementById('productSelect').addEventListener('change', function() {
   const [sap, name] = val.split('|');
   selectedProduct = LABEL_DB.find(r => r.sap === sap && r.name === name && r.machine === sel.value);
 
-  // Set reference from CSV_MACHINES if available
-  const refRow = CSV_MACHINES.find(r => r.machine === sel.value);
-  reference = (refRow && refRow.lot) ? refRow : null;
-
-  // Show info bar
   const shelfMo = SAP_SHELF_LIFE[sap];
   document.getElementById('info-sap').textContent = sap;
   document.getElementById('info-shelf').textContent = shelfMo != null ? shelfMo + ' months' : 'N/A';
@@ -825,7 +795,6 @@ document.getElementById('productSelect').addEventListener('change', function() {
   document.getElementById('info-pouch-flag').textContent = selectedProduct && selectedProduct.hasPouch ? 'YES ✓' : 'NO';
   infoBar.style.display = 'flex';
 
-  // Auto-set pouch toggle based on product data
   if (selectedProduct && selectedProduct.hasPouch) {
     pouchEnabled = true;
     document.getElementById('pouchToggle').classList.add('on');
@@ -837,9 +806,9 @@ document.getElementById('productSelect').addEventListener('change', function() {
   }
   updateBadge('pouch', pouchEnabled ? 'PENDING' : 'SKIPPED');
   resetFields();
+  evaluate();
 });
 
-// ── Pouch toggle (manual override) ──
 function togglePouch() {
   pouchEnabled = !pouchEnabled;
   document.getElementById('pouchToggle').classList.toggle('on', pouchEnabled);
@@ -856,10 +825,9 @@ function clearPouchFields() {
   });
   setStatus('pouch-web',''); setStatus('pouch-unique','');
   document.getElementById('pouch-parsed').innerHTML = '<span style="color:var(--muted);font-family:var(--mono);font-size:11px;">parsed data will appear here after scan</span>';
-  evaluate();
 }
 
-// ── Parse the {{...}} QR format ──
+// Parse the {{...}} QR format
 function parseQR(raw) {
   const result = {};
   if (!raw) return result;
@@ -872,7 +840,7 @@ function parseQR(raw) {
   return result;
 }
 
-// ── Normalise dates to YYYY-MM-DD ──
+// Normalise dates to YYYY-MM-DD
 function normaliseDate(d) {
   if (!d) return '';
   if (/^\d{4}-\d{2}-\d{2}$/.test(d.trim())) return d.trim();
@@ -881,7 +849,26 @@ function normaliseDate(d) {
   return d.trim().toLowerCase();
 }
 
-// ── Status helpers ──
+// Extract the manufacture date embedded in a lot number.
+// Lot format: [letters prefix] MMDDYY [alphanumeric suffix]
+// e.g. MA0325261E → 03/25/26 → 2026-03-25
+// e.g. FE0317261H → 03/17/26 → 2026-03-17
+// e.g. QD0314261K → 03/14/26 → 2026-03-14
+// Returns YYYY-MM-DD string, or null if the pattern is not found.
+function mfgDateFromLot(lot) {
+  if (!lot) return null;
+  // Strip any leading letters to find the 6-digit MMDDYY block
+  const m = lot.match(/^[A-Za-z]+(\d{2})(\d{2})(\d{2})/);
+  if (!m) return null;
+  const mm = m[1], dd = m[2], yy = m[3];
+  // Validate ranges before returning
+  const month = parseInt(mm, 10);
+  const day   = parseInt(dd, 10);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const year = 2000 + parseInt(yy, 10);
+  return `${year}-${mm}-${dd}`;
+}
+
 function setStatus(fieldId, state) {
   const el = document.getElementById('st-' + fieldId);
   if (!el) return;
@@ -906,7 +893,6 @@ function updateBadge(section, text, state) {
   if (state) el.classList.add(state);
 }
 
-// ── Render parsed chips ──
 function renderChips(containerId, parsed, lotRef, expRef) {
   const el = document.getElementById(containerId);
   if (!parsed || !Object.keys(parsed).length) {
@@ -915,67 +901,92 @@ function renderChips(containerId, parsed, lotRef, expRef) {
   }
   el.innerHTML = Object.entries(parsed).map(([k,v]) => {
     let cls = '';
-    if (k === 'lot') cls = (lotRef && v === lotRef) ? 'highlight-lot' : 'mismatch';
-    else if (k === 'expire') {
-      const match = expRef && normaliseDate(v) === normaliseDate(expRef);
-      cls = match ? 'highlight-exp' : 'mismatch';
+    if (k === 'lot' && lotRef) {
+      cls = (v === lotRef) ? 'highlight-lot' : 'mismatch';
+    } else if (k === 'expire' && expRef) {
+      cls = (normaliseDate(v) === normaliseDate(expRef)) ? 'highlight-exp' : 'mismatch';
     }
     return `<span class="chip ${cls}"><span class="chip-key">${k}=</span><span class="chip-val">${v}</span></span>`;
   }).join('');
 }
 
-// ── Main evaluation ──
+// ── Main evaluation — consistency only, no hardcoded reference data ──
 function evaluate() {
   let allPass = true;
-  const lot = document.getElementById('br-lot').value.trim();
-  const mfg = document.getElementById('br-mfg').value.trim();
-  const exp = document.getElementById('br-exp').value.trim();
-  const caseWeb = document.getElementById('case-web').value.trim();
+  const lot    = document.getElementById('br-lot').value.trim();
+  const mfg    = document.getElementById('br-mfg').value.trim();
+  const exp    = document.getElementById('br-exp').value.trim();
+  const caseWeb    = document.getElementById('case-web').value.trim();
   const caseUnique = document.getElementById('case-unique').value.trim();
-  const pouchWeb = document.getElementById('pouch-web').value.trim();
-  const pouchUnique = document.getElementById('pouch-unique').value.trim();
+  const pouchWeb   = document.getElementById('pouch-web').value.trim();
+  const pouchUnique= document.getElementById('pouch-unique').value.trim();
 
-  // ── Batch record checks ──
+  // ── Batch record: cross-check lot number encodes the manufacture date ──
+  // Lot format: [letters][MMDDYY][suffix]  e.g. MA0325261E → 2026-03-25
   let batchOk = true;
+
+  const lotMfgDate = mfgDateFromLot(lot); // YYYY-MM-DD or null
+
+  // Show/hide the decoded date hint under the lot field
+  const lotHint = document.getElementById('lot-decoded');
+  const lotHintDate = document.getElementById('lot-decoded-date');
+  if (lot && lotMfgDate) {
+    lotHint.style.display = 'block';
+    lotHintDate.textContent = lotMfgDate;
+  } else {
+    lotHint.style.display = 'none';
+  }
+
   if (lot) {
-    const ok = !reference || lot === reference.lot;
-    markInput('br-lot', ok ? 'pass' : 'fail'); setStatus('br-lot', ok ? 'pass' : 'fail');
-    if (!ok) batchOk = false;
-  } else { markInput('br-lot',''); setStatus('br-lot',''); }
+    const lotOk = lotMfgDate !== null;
+    markInput('br-lot', lotOk ? 'pass' : 'fail');
+    setStatus('br-lot', lotOk ? 'pass' : 'fail');
+    if (!lotOk) batchOk = false;
+  } else {
+    markInput('br-lot', ''); setStatus('br-lot', '');
+  }
 
   if (mfg) {
-    const ok = !reference || normaliseDate(mfg) === normaliseDate(reference.mfgDate);
-    markInput('br-mfg', ok ? 'pass' : 'fail'); setStatus('br-mfg', ok ? 'pass' : 'fail');
-    if (!ok) batchOk = false;
-  } else { markInput('br-mfg',''); setStatus('br-mfg',''); }
+    const normMfg = normaliseDate(mfg);
+    const validDate = /^\d{4}-\d{2}-\d{2}$/.test(normMfg);
+    // If lot is present and encodes a date, mfg must match it exactly
+    const mfgOk = validDate && (lotMfgDate ? normMfg === lotMfgDate : true);
+    markInput('br-mfg', mfgOk ? 'pass' : 'fail');
+    setStatus('br-mfg', mfgOk ? 'pass' : 'fail');
+    if (!mfgOk) batchOk = false;
+  } else {
+    markInput('br-mfg', ''); setStatus('br-mfg', '');
+  }
 
   if (exp) {
-    const ok = !reference || normaliseDate(exp) === normaliseDate(reference.expDate);
-    markInput('br-exp', ok ? 'pass' : 'fail'); setStatus('br-exp', ok ? 'pass' : 'fail');
-    if (!ok) batchOk = false;
-  } else { markInput('br-exp',''); setStatus('br-exp',''); }
+    const normExp = normaliseDate(exp);
+    const validDate = /^\d{4}-\d{2}-\d{2}$/.test(normExp);
+    markInput('br-exp', validDate ? 'pass' : 'fail');
+    setStatus('br-exp', validDate ? 'pass' : 'fail');
+    if (!validDate) batchOk = false;
+  } else {
+    markInput('br-exp', ''); setStatus('br-exp', '');
+  }
 
-  // ── Shelf life check ──
-  const caseUniqueRaw = document.getElementById('case-unique').value.trim();
-  const parsedForSAP = parseQR(caseUniqueRaw);
-  // Try SAP from selected product first, then fall back to QR item field
-  const sapNum = (selectedProduct && selectedProduct.sap !== 'N/A')
-    ? selectedProduct.sap
-    : (parsedForSAP.item ? parsedForSAP.item.replace(/\D/g,'').slice(0,9) : null);
+  // ── Shelf life check (mfg vs exp vs SAP expected) ──
+  const sapNum = selectedProduct && selectedProduct.sap !== 'N/A' ? selectedProduct.sap : null;
   const expectedMonths = sapNum ? (SAP_SHELF_LIFE[sapNum] ?? null) : null;
   const shelfRow = document.getElementById('shelf-life-row');
-  const shelfNoSap = document.getElementById('shelf-no-sap');
+  const shelfNoProd = document.getElementById('shelf-no-product');
 
   if (mfg && exp) {
-    const computed = monthsBetween(normaliseDate(mfg), normaliseDate(exp));
+    const normMfg = normaliseDate(mfg);
+    const normExp = normaliseDate(exp);
+    const computed = monthsBetween(normMfg, normExp);
+
     if (expectedMonths !== null) {
-      shelfRow.style.display = 'block'; shelfNoSap.style.display = 'none';
-      const compEl = document.getElementById('shelf-computed');
-      const expEl = document.getElementById('shelf-expected');
-      const verdEl = document.getElementById('shelf-verdict');
+      shelfRow.style.display = 'block'; shelfNoProd.style.display = 'none';
+      const compEl  = document.getElementById('shelf-computed');
+      const expEl   = document.getElementById('shelf-expected');
+      const verdEl  = document.getElementById('shelf-verdict');
       compEl.textContent = computed !== null ? `${computed} months` : 'invalid dates';
-      expEl.textContent = `${expectedMonths} months`;
-      const ok = computed === expectedMonths;
+      expEl.textContent  = `${expectedMonths} months`;
+      const ok = isExactShelfLife(normMfg, normExp, expectedMonths);
       compEl.style.color = ok ? 'var(--pass)' : 'var(--fail)';
       verdEl.textContent = ok ? '✓ CORRECT' : '✗ MISMATCH';
       verdEl.style.background = ok ? 'rgba(0,230,118,0.12)' : 'rgba(255,23,68,0.12)';
@@ -983,58 +994,79 @@ function evaluate() {
       if (!ok) batchOk = false;
     } else {
       shelfRow.style.display = 'none';
-      shelfNoSap.style.display = (selectedProduct && !caseUniqueRaw) ? 'block' : 'none';
+      shelfNoProd.style.display = (!selectedProduct) ? 'block' : 'none';
     }
   } else {
-    shelfRow.style.display = 'none'; shelfNoSap.style.display = 'none';
+    shelfRow.style.display = 'none';
+    shelfNoProd.style.display = 'none';
   }
 
   const batchFilled = lot && mfg && exp;
   updateBadge('batch', batchFilled ? (batchOk ? 'PASS' : 'FAIL') : 'PENDING', batchFilled ? (batchOk ? 'pass' : 'fail') : null);
 
-  // ── Case label checks ──
+  // ── Case label: QR fields must match batch record values ──
   let caseOk = true;
-  const caseExpRef = reference ? reference.expDate : exp;
-  const caseLotRef = reference ? reference.lot : lot;
 
   if (caseWeb) {
-    const ok = !reference || !reference.caseWeb || caseWeb === reference.caseWeb;
-    markInput('case-web', ok ? 'pass' : 'fail'); setStatus('case-web', ok ? 'pass' : 'fail');
-    if (!ok) caseOk = false;
-  } else { markInput('case-web',''); setStatus('case-web',''); }
+    // Website QR just needs to be non-empty (no fixed expected URL)
+    markInput('case-web', 'pass'); setStatus('case-web', 'pass');
+  } else {
+    markInput('case-web', ''); setStatus('case-web', '');
+  }
 
   if (caseUnique) {
     const parsed = parseQR(caseUnique);
-    renderChips('case-parsed', parsed, caseLotRef, caseExpRef);
-    const lotMatch = lot ? parsed.lot === lot : (!reference || parsed.lot === caseLotRef);
-    const expMatch = exp ? normaliseDate(parsed.expire) === normaliseDate(exp) : (!reference || normaliseDate(parsed.expire) === normaliseDate(caseExpRef));
-    const ok = lotMatch && expMatch;
-    markInput('case-unique', ok ? 'pass' : 'fail'); setStatus('case-unique', ok ? 'pass' : 'fail');
+    // Show chip highlights only when we have batch record values to compare against
+    renderChips('case-parsed', parsed, lot || null, exp || null);
+
+    let ok = true;
+    // Only check lot match if batch record lot has been scanned
+    if (lot && parsed.lot !== undefined) {
+      if (parsed.lot !== lot) ok = false;
+    }
+    // Only check expiry match if batch record exp has been scanned
+    if (exp && parsed.expire !== undefined) {
+      if (normaliseDate(parsed.expire) !== normaliseDate(exp)) ok = false;
+    }
+    markInput('case-unique', ok ? 'pass' : 'fail');
+    setStatus('case-unique', ok ? 'pass' : 'fail');
     if (!ok) caseOk = false;
-  } else { renderChips('case-parsed', null); markInput('case-unique',''); setStatus('case-unique',''); }
+  } else {
+    renderChips('case-parsed', null);
+    markInput('case-unique', ''); setStatus('case-unique', '');
+  }
 
   const caseFilled = caseWeb && caseUnique;
   updateBadge('case', caseFilled ? (caseOk ? 'PASS' : 'FAIL') : 'PENDING', caseFilled ? (caseOk ? 'pass' : 'fail') : null);
 
-  // ── Pouch label checks ──
+  // ── Pouch label: same consistency rules ──
   let pouchOk = true;
   if (pouchEnabled) {
-    const pouchExpRef = reference ? reference.expDate : exp;
-    const pouchLotRef = reference ? reference.lot : lot;
     if (pouchWeb) {
-      const ok = !reference || !reference.pouchWeb || pouchWeb === reference.pouchWeb;
-      markInput('pouch-web', ok ? 'pass' : 'fail'); setStatus('pouch-web', ok ? 'pass' : 'fail');
-      if (!ok) pouchOk = false;
-    } else { markInput('pouch-web',''); setStatus('pouch-web',''); }
+      markInput('pouch-web', 'pass'); setStatus('pouch-web', 'pass');
+    } else {
+      markInput('pouch-web', ''); setStatus('pouch-web', '');
+    }
+
     if (pouchUnique) {
       const parsed = parseQR(pouchUnique);
-      renderChips('pouch-parsed', parsed, pouchLotRef, pouchExpRef);
-      const lotMatch = lot ? parsed.lot === lot : (!reference || parsed.lot === pouchLotRef);
-      const expMatch = exp ? normaliseDate(parsed.expire) === normaliseDate(exp) : (!reference || normaliseDate(parsed.expire) === normaliseDate(pouchExpRef));
-      const ok = lotMatch && expMatch;
-      markInput('pouch-unique', ok ? 'pass' : 'fail'); setStatus('pouch-unique', ok ? 'pass' : 'fail');
+      renderChips('pouch-parsed', parsed, lot || null, exp || null);
+
+      let ok = true;
+      if (lot && parsed.lot !== undefined) {
+        if (parsed.lot !== lot) ok = false;
+      }
+      if (exp && parsed.expire !== undefined) {
+        if (normaliseDate(parsed.expire) !== normaliseDate(exp)) ok = false;
+      }
+      markInput('pouch-unique', ok ? 'pass' : 'fail');
+      setStatus('pouch-unique', ok ? 'pass' : 'fail');
       if (!ok) pouchOk = false;
-    } else { renderChips('pouch-parsed', null); markInput('pouch-unique',''); setStatus('pouch-unique',''); }
+    } else {
+      renderChips('pouch-parsed', null);
+      markInput('pouch-unique', ''); setStatus('pouch-unique', '');
+    }
+
     const pouchFilled = pouchWeb && pouchUnique;
     updateBadge('pouch', pouchFilled ? (pouchOk ? 'PASS' : 'FAIL') : 'PENDING', pouchFilled ? (pouchOk ? 'pass' : 'fail') : null);
   }
@@ -1045,7 +1077,7 @@ function evaluate() {
   if (!anyFilled) { summaryEl.classList.remove('visible'); return; }
 
   summaryEl.classList.add('visible');
-  const list = document.getElementById('result-list');
+  const list    = document.getElementById('result-list');
   const verdict = document.getElementById('final-verdict');
   list.innerHTML = '';
 
@@ -1058,35 +1090,69 @@ function evaluate() {
   };
 
   if (batchFilled) {
-    const lotOk = !reference || lot === reference.lot;
-    const mfgOk = !reference || normaliseDate(mfg) === normaliseDate(reference.mfgDate);
-    const expOk = !reference || normaliseDate(exp) === normaliseDate(reference.expDate);
-    addRow('Batch Record Lot#', lotOk ? 'ok' : 'err', lotOk ? '' : 'does not match reference');
-    addRow('Batch Record Mfg Date', mfgOk ? 'ok' : 'err', mfgOk ? '' : 'does not match reference');
-    addRow('Batch Record Exp Date', expOk ? 'ok' : 'err', expOk ? '' : 'does not match reference');
+    const lotMfgSummary = mfgDateFromLot(lot);
+    const lotOk = lotMfgSummary !== null;
+    addRow('Batch Record Lot#', lotOk ? 'ok' : 'err',
+      lotOk ? `${lot} → mfg ${lotMfgSummary}` : `${lot} — cannot parse date from lot`);
+
+    const normMfg = normaliseDate(mfg);
+    const validMfg = /^\d{4}-\d{2}-\d{2}$/.test(normMfg);
+    const mfgMatchesLot = validMfg && (lotMfgSummary ? normMfg === lotMfgSummary : true);
+    addRow('Batch Record Mfg Date', mfgMatchesLot ? 'ok' : 'err',
+      !validMfg ? 'unrecognised date format'
+      : mfgMatchesLot ? `${normMfg} matches lot`
+      : `${normMfg} does not match lot-encoded date ${lotMfgSummary}`);
+
+    const normExp = normaliseDate(exp);
+    const validExp = /^\d{4}-\d{2}-\d{2}$/.test(normExp);
+    addRow('Batch Record Exp Date', validExp ? 'ok' : 'err', validExp ? normExp : 'unrecognised date format');
+
     if (expectedMonths !== null) {
       const computed = monthsBetween(normaliseDate(mfg), normaliseDate(exp));
-      const shelfOk = computed === expectedMonths;
-      addRow(`Shelf Life (${computed} mo vs expected ${expectedMonths} mo)`, shelfOk ? 'ok' : 'err', shelfOk ? 'correct duration' : `off by ${Math.abs(computed - expectedMonths)} month(s)`);
+      const shelfOk  = isExactShelfLife(normaliseDate(mfg), normaliseDate(exp), expectedMonths);
+      const mfgDay   = new Date(normaliseDate(mfg)).getUTCDate();
+      const expDay   = new Date(normaliseDate(exp)).getUTCDate();
+      const dayNote  = mfgDay !== expDay ? ` (day mismatch: mfg day ${mfgDay}, exp day ${expDay})` : '';
+      addRow(
+        `Shelf Life (${computed} mo vs expected ${expectedMonths} mo)`,
+        shelfOk ? 'ok' : 'err',
+        shelfOk ? 'correct duration, day matches' : `off by ${Math.abs(computed - expectedMonths)} month(s)${dayNote}`
+      );
     }
   }
+
   if (caseFilled) {
-    const caseWebOk = !reference || !reference.caseWeb || caseWeb === reference.caseWeb;
-    addRow('Case Label — Website QR', caseWebOk ? 'ok' : 'err', caseWebOk ? 'scanned OK' : 'URL mismatch');
+    addRow('Case Label — Website QR', 'ok', 'scanned OK');
     const cu = parseQR(caseUnique);
-    const clotOk = lot ? cu.lot === lot : true;
-    const cexpOk = exp ? normaliseDate(cu.expire) === normaliseDate(exp) : true;
-    addRow('Case Label — Lot# in QR', clotOk ? 'ok' : 'err', clotOk ? `lot=${cu.lot}` : `got ${cu.lot}, expected ${lot}`);
-    addRow('Case Label — Expire in QR', cexpOk ? 'ok' : 'err', cexpOk ? `expire=${cu.expire}` : `got ${cu.expire}, expected ${exp}`);
+    if (lot && cu.lot !== undefined) {
+      const lotOk = cu.lot === lot;
+      addRow('Case Label — Lot# in QR', lotOk ? 'ok' : 'err', lotOk ? `lot=${cu.lot}` : `got ${cu.lot}, expected ${lot}`);
+    } else {
+      addRow('Case Label — Lot# in QR', 'ok', cu.lot ? `lot=${cu.lot}` : 'present');
+    }
+    if (exp && cu.expire !== undefined) {
+      const expOk = normaliseDate(cu.expire) === normaliseDate(exp);
+      addRow('Case Label — Expire in QR', expOk ? 'ok' : 'err', expOk ? `expire=${cu.expire}` : `got ${cu.expire}, expected ${exp}`);
+    } else {
+      addRow('Case Label — Expire in QR', 'ok', cu.expire ? `expire=${cu.expire}` : 'present');
+    }
   }
+
   if (pouchEnabled && pouchWeb && pouchUnique) {
-    const pwOk = !reference || !reference.pouchWeb || pouchWeb === reference.pouchWeb;
-    addRow('Pouch Label — Website QR', pwOk ? 'ok' : 'err', pwOk ? 'scanned OK' : 'URL mismatch');
+    addRow('Pouch Label — Website QR', 'ok', 'scanned OK');
     const pu = parseQR(pouchUnique);
-    const plotOk = lot ? pu.lot === lot : true;
-    const pexpOk = exp ? normaliseDate(pu.expire) === normaliseDate(exp) : true;
-    addRow('Pouch Label — Lot# in QR', plotOk ? 'ok' : 'err', plotOk ? `lot=${pu.lot}` : `got ${pu.lot}, expected ${lot}`);
-    addRow('Pouch Label — Expire in QR', pexpOk ? 'ok' : 'err', pexpOk ? `expire=${pu.expire}` : `got ${pu.expire}, expected ${exp}`);
+    if (lot && pu.lot !== undefined) {
+      const lotOk = pu.lot === lot;
+      addRow('Pouch Label — Lot# in QR', lotOk ? 'ok' : 'err', lotOk ? `lot=${pu.lot}` : `got ${pu.lot}, expected ${lot}`);
+    } else {
+      addRow('Pouch Label — Lot# in QR', 'ok', pu.lot ? `lot=${pu.lot}` : 'present');
+    }
+    if (exp && pu.expire !== undefined) {
+      const expOk = normaliseDate(pu.expire) === normaliseDate(exp);
+      addRow('Pouch Label — Expire in QR', expOk ? 'ok' : 'err', expOk ? `expire=${pu.expire}` : `got ${pu.expire}, expected ${exp}`);
+    } else {
+      addRow('Pouch Label — Expire in QR', 'ok', pu.expire ? `expire=${pu.expire}` : 'present');
+    }
   } else if (!pouchEnabled) {
     addRow('Pouch Label', 'skip', 'not applicable for this product');
   }
@@ -1095,13 +1161,12 @@ function evaluate() {
   verdict.className = 'final-verdict ' + (allPass ? 'pass' : 'fail');
 }
 
-// ── Wire up all inputs ──
+// Wire up all inputs
 ['br-lot','br-mfg','br-exp','case-web','case-unique','pouch-web','pouch-unique'].forEach(id => {
   const el = document.getElementById(id);
   if (el) el.addEventListener('input', evaluate);
 });
 
-// ── Reset ──
 function resetFields() {
   ['br-lot','br-mfg','br-exp','case-web','case-unique','pouch-web','pouch-unique'].forEach(id => {
     const el = document.getElementById(id);
@@ -1115,7 +1180,8 @@ function resetFields() {
     if (el) el.innerHTML = '<span style="color:var(--muted);font-family:var(--mono);font-size:11px;">parsed data will appear here after scan</span>';
   });
   document.getElementById('shelf-life-row').style.display = 'none';
-  document.getElementById('shelf-no-sap').style.display = 'none';
+  document.getElementById('shelf-no-product').style.display = 'none';
+  document.getElementById('lot-decoded').style.display = 'none';
   document.getElementById('summary').classList.remove('visible');
 }
 
@@ -1124,8 +1190,6 @@ function resetAll() {
   document.getElementById('productSelect').innerHTML = '<option value="">— Select product —</option>';
   document.getElementById('product-bar').style.display = 'none';
   document.getElementById('product-info-bar').style.display = 'none';
-  reference = null;
-  selectedMachine = null;
   selectedProduct = null;
   pouchEnabled = false;
   document.getElementById('pouchToggle').classList.remove('on');
