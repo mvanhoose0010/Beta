@@ -1026,13 +1026,16 @@ function evaluate() {
     renderChips('case-parsed', parsed, lot || null, exp || null);
 
     let ok = true;
-    // Only enforce strict presence+match once the batch record lot/exp have been scanned
+    // item/SAP check — only when a product is selected
+    if (selectedProduct && selectedProduct.sap !== 'N/A') {
+      if (parsed.item === undefined || parsed.item !== selectedProduct.sap) ok = false;
+    }
+    // lot check — only once batch lot has been scanned
     if (lot) {
-      // lot field must exist in QR and match exactly
       if (parsed.lot === undefined || parsed.lot !== lot) ok = false;
     }
+    // expire check — only once batch exp has been scanned
     if (exp) {
-      // expire field must exist in QR and match exactly (normalised)
       if (parsed.expire === undefined || normaliseDate(parsed.expire) !== normaliseDate(exp)) ok = false;
     }
     markInput('case-unique', ok ? 'pass' : 'fail');
@@ -1064,13 +1067,16 @@ function evaluate() {
       renderChips('pouch-parsed', parsed, lot || null, exp || null);
 
       let ok = true;
-      // Only enforce strict presence+match once the batch record lot/exp have been scanned
+      // item/SAP check — only when a product is selected
+      if (selectedProduct && selectedProduct.sap !== 'N/A') {
+        if (parsed.item === undefined || parsed.item !== selectedProduct.sap) ok = false;
+      }
+      // lot check — only once batch lot has been scanned
       if (lot) {
-        // lot field must exist in QR and match exactly
         if (parsed.lot === undefined || parsed.lot !== lot) ok = false;
       }
+      // expire check — only once batch exp has been scanned
       if (exp) {
-        // expire field must exist in QR and match exactly (normalised)
         if (parsed.expire === undefined || normaliseDate(parsed.expire) !== normaliseDate(exp)) ok = false;
       }
       markInput('pouch-unique', ok ? 'pass' : 'fail');
@@ -1141,6 +1147,19 @@ function evaluate() {
       caseWebOk ? 'URL matches' : `got "${caseWeb}", expected "${EXPECTED_WEBSITE_QR}"`);
 
     const cu = parseQR(caseUnique);
+    // item/SAP check
+    if (selectedProduct && selectedProduct.sap !== 'N/A') {
+      if (cu.item === undefined) {
+        addRow('Case Label — Item# in QR', 'err', 'field "item" missing from QR data');
+      } else {
+        const itemOk = cu.item === selectedProduct.sap;
+        addRow('Case Label — Item# in QR', itemOk ? 'ok' : 'err',
+          itemOk ? `item=${cu.item}` : `got "${cu.item}", expected "${selectedProduct.sap}"`);
+      }
+    } else {
+      addRow('Case Label — Item# in QR', 'skip', 'no product selected');
+    }
+    // lot check
     if (lot) {
       if (cu.lot === undefined) {
         addRow('Case Label — Lot# in QR', 'err', 'field "lot" missing from QR data');
@@ -1152,6 +1171,7 @@ function evaluate() {
     } else {
       addRow('Case Label — Lot# in QR', 'ok', cu.lot ? `lot=${cu.lot}` : 'present (batch lot not yet scanned)');
     }
+    // expire check
     if (exp) {
       if (cu.expire === undefined) {
         addRow('Case Label — Expire in QR', 'err', 'field "expire" missing from QR data');
@@ -1171,6 +1191,19 @@ function evaluate() {
       pouchWebOk ? 'URL matches' : `got "${pouchWeb}", expected "${EXPECTED_WEBSITE_QR}"`);
 
     const pu = parseQR(pouchUnique);
+    // item/SAP check
+    if (selectedProduct && selectedProduct.sap !== 'N/A') {
+      if (pu.item === undefined) {
+        addRow('Pouch Label — Item# in QR', 'err', 'field "item" missing from QR data');
+      } else {
+        const itemOk = pu.item === selectedProduct.sap;
+        addRow('Pouch Label — Item# in QR', itemOk ? 'ok' : 'err',
+          itemOk ? `item=${pu.item}` : `got "${pu.item}", expected "${selectedProduct.sap}"`);
+      }
+    } else {
+      addRow('Pouch Label — Item# in QR', 'skip', 'no product selected');
+    }
+    // lot check
     if (lot) {
       if (pu.lot === undefined) {
         addRow('Pouch Label — Lot# in QR', 'err', 'field "lot" missing from QR data');
@@ -1182,6 +1215,7 @@ function evaluate() {
     } else {
       addRow('Pouch Label — Lot# in QR', 'ok', pu.lot ? `lot=${pu.lot}` : 'present (batch lot not yet scanned)');
     }
+    // expire check
     if (exp) {
       if (pu.expire === undefined) {
         addRow('Pouch Label — Expire in QR', 'err', 'field "expire" missing from QR data');
