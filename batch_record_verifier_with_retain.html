@@ -1,0 +1,821 @@
+
+<style>
+:root{--bg:#0d0f14;--surface:#13161e;--surface2:#1a1e2a;--border:#252a38;--accent:#00e5ff;--accent2:#7c3aed;--pass:#00e676;--fail:#ff1744;--warn:#ffab00;--text:#e8eaf6;--muted:#5c6380;--mono:'JetBrains Mono',monospace;--sans:'Syne',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+.app{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:32px 20px 80px}
+header{display:flex;align-items:flex-end;gap:16px;margin-bottom:40px;border-bottom:1px solid var(--border);padding-bottom:24px}
+.logo-mark{width:48px;height:48px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:grid;place-items:center;font-size:22px;flex-shrink:0}
+h1{font-size:26px;font-weight:800;letter-spacing:-.5px;line-height:1}
+h1 span{display:block;font-size:12px;font-weight:400;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-top:4px;font-family:var(--mono)}
+.machine-bar{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+.machine-bar label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-family:var(--mono);white-space:nowrap}
+.machine-bar select{background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:13px;padding:8px 14px;border-radius:6px;cursor:pointer;outline:none;flex:1;transition:border-color .2s}
+.machine-bar select:focus{border-color:var(--accent)}
+.section{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden;transition:border-color .3s}
+.section.active{border-color:var(--accent)}
+.section-header{display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--surface2);border-bottom:1px solid var(--border)}
+.section-icon{width:28px;height:28px;border-radius:6px;background:var(--border);display:grid;place-items:center;font-size:13px;flex-shrink:0}
+.section-title{font-size:13px;font-weight:600;letter-spacing:.5px;flex:1}
+.section-badge{font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:20px;background:var(--border);color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+.section-badge.pass{background:rgba(0,230,118,.15);color:var(--pass)}
+.section-badge.fail{background:rgba(255,23,68,.15);color:var(--fail)}
+.section-badge.warn{background:rgba(255,171,0,.15);color:var(--warn)}
+.section-body{padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.field{display:grid;grid-template-columns:160px 1fr auto;align-items:center;gap:10px}
+.field-label{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+.field input{background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:13px;padding:9px 12px;outline:none;transition:border-color .2s,box-shadow .2s;width:100%}
+.field input:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,229,255,.1)}
+.field input.pass{border-color:var(--pass);background:rgba(0,230,118,.05)}
+.field input.fail{border-color:var(--fail);background:rgba(255,23,68,.05)}
+.field input.warn{border-color:var(--warn);background:rgba(255,171,0,.05)}
+.field input[readonly]{cursor:default;opacity:.7}
+.field-status{width:22px;height:22px;display:grid;place-items:center;font-size:14px;flex-shrink:0}
+.expected-hint{font-family:var(--mono);font-size:10px;color:var(--muted);padding:2px 0 2px 172px;letter-spacing:.5px}
+.expected-hint span{color:var(--accent)}
+.parsed-chips{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px;background:var(--bg);border-radius:6px;border:1px solid var(--border);min-height:42px;align-items:center}
+.chip{font-family:var(--mono);font-size:11px;padding:3px 8px;border-radius:4px;display:flex;gap:5px;background:var(--surface2)}
+.chip .chip-key{color:var(--muted)}
+.chip .chip-val{color:var(--accent)}
+.chip.highlight-lot .chip-val{color:var(--pass)}
+.chip.highlight-exp .chip-val{color:#ff9800}
+.chip.mismatch .chip-val{color:var(--fail)}
+.sub-label{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.sub-label::after{content:'';flex:1;height:1px;background:var(--border)}
+#summary{margin-top:28px;padding:18px 22px;border-radius:12px;border:1px solid var(--border);background:var(--surface);display:none}
+#summary.visible{display:block}
+.summary-title{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);font-family:var(--mono);margin-bottom:12px}
+.result-list{display:flex;flex-direction:column;gap:8px}
+.result-row{display:flex;align-items:center;gap:10px;font-size:13px;font-family:var(--mono)}
+.result-row .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.result-row.ok .dot{background:var(--pass)}
+.result-row.err .dot{background:var(--fail)}
+.result-row.skip .dot{background:var(--muted)}
+.result-row.ok{color:var(--pass)}
+.result-row.err{color:var(--fail)}
+.result-row.skip{color:var(--muted)}
+.final-verdict{margin-top:16px;padding:12px 16px;border-radius:8px;font-weight:700;font-size:15px;text-align:center;letter-spacing:1px;font-family:var(--mono)}
+.final-verdict.pass{background:rgba(0,230,118,.12);color:var(--pass);border:1px solid rgba(0,230,118,.3)}
+.final-verdict.fail{background:rgba(255,23,68,.12);color:var(--fail);border:1px solid rgba(255,23,68,.3)}
+.btn-reset{display:block;margin:20px auto 0;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:12px;letter-spacing:2px;text-transform:uppercase;padding:10px 24px;border-radius:6px;cursor:pointer;transition:all .2s}
+.btn-reset:hover{border-color:var(--accent);color:var(--accent)}
+.toggle-row{display:flex;align-items:center;gap:10px;padding:0 18px 14px}
+.toggle-row label{font-size:12px;color:var(--muted);font-family:var(--mono);cursor:pointer;letter-spacing:1px}
+.toggle{width:36px;height:20px;background:var(--border);border-radius:10px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.toggle.on{background:var(--accent2)}
+.toggle::after{content:'';position:absolute;width:14px;height:14px;background:white;border-radius:50%;top:3px;left:3px;transition:left .2s}
+.toggle.on::after{left:19px}
+.retain-note{font-family:var(--mono);font-size:10px;color:var(--muted);padding:6px 10px;background:rgba(0,229,255,.04);border:1px solid rgba(0,229,255,.1);border-radius:6px;line-height:1.6}
+.retain-note span{color:var(--accent)}
+@media(max-width:600px){.field{grid-template-columns:1fr}.field-label{margin-bottom:-4px}.field-status{display:none}.expected-hint{padding-left:0}}
+</style>
+
+<div class="app">
+<header>
+  <div class="logo-mark">⬡</div>
+  <div><h1>Batch Record Verifier<span>Label Consistency Check System</span></h1></div>
+</header>
+
+<div class="machine-bar">
+  <label>Machine</label>
+  <select id="machineSelect"><option value="">— Select machine —</option></select>
+</div>
+<div class="machine-bar" id="product-bar" style="display:none">
+  <label>Product</label>
+  <select id="productSelect"><option value="">— Select product —</option></select>
+</div>
+<div id="product-info-bar" style="display:none;margin-bottom:16px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-family:var(--mono);font-size:12px;flex-wrap:wrap;gap:16px;">
+  <span style="color:var(--muted)">SAP#</span><span id="info-sap" style="color:var(--accent)"></span>
+  <span style="color:var(--muted)">SHELF LIFE</span><span id="info-shelf" style="color:var(--accent)"></span>
+  <span style="color:var(--muted)">LABELS</span><span id="info-labels" style="color:var(--accent)"></span>
+  <span style="color:var(--muted)">POUCH</span><span id="info-pouch-flag" style="color:var(--accent)"></span>
+</div>
+
+<!-- SECTION 1: Batch Record Front Page -->
+<div class="section" id="sec-batch">
+  <div class="section-header">
+    <div class="section-icon">📋</div>
+    <span class="section-title">Batch Record — Front Page</span>
+    <span class="section-badge" id="badge-batch">PENDING</span>
+  </div>
+  <div class="section-body">
+    <div class="sub-label">Scan barcodes from the front page</div>
+    <div class="field">
+      <span class="field-label">Lot Number</span>
+      <input type="text" id="br-lot" placeholder="Scan or type lot barcode…" autocomplete="off" spellcheck="false">
+      <span class="field-status" id="st-br-lot">○</span>
+    </div>
+    <div id="lot-decoded" style="display:none;font-family:var(--mono);font-size:11px;color:var(--muted);padding:2px 0 4px 172px;">
+      ↳ encodes mfg date: <span id="lot-decoded-date" style="color:var(--accent)"></span>
+    </div>
+    <div class="field">
+      <span class="field-label">Manufacture Date</span>
+      <input type="text" id="br-mfg" placeholder="Scan manufacture date barcode…" autocomplete="off" spellcheck="false">
+      <span class="field-status" id="st-br-mfg">○</span>
+    </div>
+    <div class="field">
+      <span class="field-label">Expiration Date</span>
+      <input type="text" id="br-exp" placeholder="Scan expiration date barcode…" autocomplete="off" spellcheck="false">
+      <span class="field-status" id="st-br-exp">○</span>
+    </div>
+    <div class="sub-label" style="margin-top:4px">Shelf life verification</div>
+    <div id="shelf-life-row" style="display:none">
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg);border-radius:6px;border:1px solid var(--border)">
+        <span style="font-family:var(--mono);font-size:11px;color:var(--muted)">COMPUTED</span>
+        <span id="shelf-computed" style="font-family:var(--mono);font-size:13px;color:var(--text)">—</span>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--muted)">EXPECTED</span>
+        <span id="shelf-expected" style="font-family:var(--mono);font-size:13px;color:var(--text)">—</span>
+        <span id="shelf-verdict" style="font-family:var(--mono);font-size:12px;margin-left:auto;padding:3px 10px;border-radius:4px"></span>
+      </div>
+    </div>
+    <div id="shelf-no-product" style="display:none;font-family:var(--mono);font-size:11px;color:var(--muted);padding:8px 2px">ℹ Select a product above to enable shelf life check</div>
+  </div>
+</div>
+
+<!-- SECTION 2: Case Label -->
+<div class="section" id="sec-case">
+  <div class="section-header">
+    <div class="section-icon">📦</div>
+    <span class="section-title">Case Label</span>
+    <span class="section-badge" id="badge-case">PENDING</span>
+  </div>
+  <div class="section-body">
+    <div class="sub-label">QR 1 — Website launcher</div>
+    <div class="field">
+      <span class="field-label">Website QR</span>
+      <input type="text" id="case-web" placeholder="Scan website QR code…" autocomplete="off" spellcheck="false">
+      <span class="field-status" id="st-case-web">○</span>
+    </div>
+    <div class="expected-hint">expected: <span>https://www.neogen.com/insert-search</span></div>
+    <div class="sub-label">QR 2 — Product unique</div>
+    <div class="field">
+      <span class="field-label">Unique QR</span>
+      <input type="text" id="case-unique" placeholder="Scan unique QR code…" autocomplete="off" spellcheck="false">
+      <span class="field-status" id="st-case-unique">○</span>
+    </div>
+    <div class="parsed-chips" id="case-parsed"><span style="color:var(--muted);font-family:var(--mono);font-size:11px">parsed data will appear here after scan</span></div>
+  </div>
+</div>
+
+<!-- SECTION 3: Pouch Label -->
+<div class="section" id="sec-pouch">
+  <div class="section-header">
+    <div class="section-icon">🏷️</div>
+    <span class="section-title">Pouch Label <span style="color:var(--muted);font-weight:400;font-size:11px">(optional)</span></span>
+    <span class="section-badge" id="badge-pouch">SKIPPED</span>
+  </div>
+  <div class="toggle-row">
+    <div class="toggle" id="pouchToggle"></div>
+    <label for="pouchToggle" onclick="togglePouch()">This product has a pouch label</label>
+  </div>
+  <div id="pouch-fields" style="display:none">
+    <div class="section-body" style="padding-top:0">
+      <div class="sub-label">QR 1 — Website launcher</div>
+      <div class="field">
+        <span class="field-label">Website QR</span>
+        <input type="text" id="pouch-web" placeholder="Scan website QR code…" autocomplete="off" spellcheck="false">
+        <span class="field-status" id="st-pouch-web">○</span>
+      </div>
+      <div class="expected-hint">expected: <span>https://www.neogen.com/insert-search</span></div>
+      <div class="sub-label">QR 2 — Product unique</div>
+      <div class="field">
+        <span class="field-label">Unique QR</span>
+        <input type="text" id="pouch-unique" placeholder="Scan unique QR code…" autocomplete="off" spellcheck="false">
+        <span class="field-status" id="st-pouch-unique">○</span>
+      </div>
+      <div class="parsed-chips" id="pouch-parsed"><span style="color:var(--muted);font-family:var(--mono);font-size:11px">parsed data will appear here after scan</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 4: Retain Label (NEW) -->
+<div class="section" id="sec-retain">
+  <div class="section-header">
+    <div class="section-icon">🔒</div>
+    <span class="section-title">Retain Label <span style="color:var(--muted);font-weight:400;font-size:11px">(manual entry)</span></span>
+    <span class="section-badge" id="badge-retain">PENDING</span>
+  </div>
+  <div class="section-body">
+    <div class="retain-note">
+      No barcodes on retain labels — type exactly what is printed. Fields are cross-checked against batch record &amp; product selection.<br>
+      <span>Disposal date = expiration date + 6 months (exact day).</span>
+    </div>
+
+    <div class="sub-label" style="margin-top:4px">Product identification</div>
+
+    <div class="field">
+      <span class="field-label">Product Name</span>
+      <input type="text" id="ret-name" placeholder="e.g. FTBFD9960" autocomplete="off" spellcheck="false">
+      <span class="field-status" id="st-ret-name">○</span>
+    </div>
+    <div class="expected-hint" id="ret-name-hint" style="display:none">expected: <span id="ret-name-expected"></span></div>
+
+    <div class="field">
+      <span class="field-label">SAP Number</span>
+      <input type="text" id="ret-sap" placeholder="e.g. 700002322" autocomplete="off" spellcheck="false">
+      <span class="field-status" id="st-ret-sap">○</span>
+    </div>
+    <div class="expected-hint" id="ret-sap-hint" style="display:none">expected: <span id="ret-sap-expected"></span></div>
+
+    <div class="sub-label">Dates &amp; traceability</div>
+
+    <div class="field">
+      <span class="field-label">Lot Number</span>
+      <input type="text" id="ret-lot" placeholder="e.g. FT040125" autocomplete="off" spellcheck="false">
+      <span class="field-status" id="st-ret-lot">○</span>
+    </div>
+    <div class="expected-hint" id="ret-lot-hint" style="display:none">expected: <span id="ret-lot-expected"></span></div>
+
+    <div class="field">
+      <span class="field-label">Expiration Date</span>
+      <input type="text" id="ret-exp" placeholder="e.g. 2026-04-18 or 04/18/2026" autocomplete="off" spellcheck="false">
+      <span class="field-status" id="st-ret-exp">○</span>
+    </div>
+    <div class="expected-hint" id="ret-exp-hint" style="display:none">expected: <span id="ret-exp-expected"></span></div>
+
+    <div class="field">
+      <span class="field-label">Disposal Date</span>
+      <input type="text" id="ret-disposal" placeholder="e.g. 2026-10-18 or 10/18/2026" autocomplete="off" spellcheck="false">
+      <span class="field-status" id="st-ret-disposal">○</span>
+    </div>
+    <div id="ret-disposal-hint-row" style="display:none">
+      <div class="expected-hint">expected (exp + 6 mo): <span id="ret-disposal-expected" style="color:var(--accent)"></span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Summary -->
+<div id="summary">
+  <div class="summary-title">Verification Summary</div>
+  <div class="result-list" id="result-list"></div>
+  <div class="final-verdict" id="final-verdict"></div>
+</div>
+
+<button class="btn-reset" onclick="resetAll()">↺ Reset / New Batch</button>
+</div>
+
+<script>
+const EXPECTED_WEBSITE_QR="https://www.neogen.com/insert-search";
+const LABEL_DB=[
+  {sap:"700002322",name:"FTBFD9960",machine:"BAM1",hasPouch:false},
+  {sap:"700002321",name:"FTPHB9960",machine:"BAM1",hasPouch:false},
+  {sap:"700002320",name:"FTPW9960",machine:"BAM1",hasPouch:false},
+  {sap:"700002327",name:"FTBFD9060",machine:"BAM1",hasPouch:false},
+  {sap:"700002326",name:"FTBPW9060",machine:"BAM1",hasPouch:false},
+  {sap:"700002323",name:"FTPW9060",machine:"BAM1",hasPouch:false},
+  {sap:"700002324",name:"FTBPWI9060",machine:"BAM1",hasPouch:false},
+  {sap:"700002330",name:"FTPHB9060",machine:"BAM1",hasPouch:false},
+  {sap:"700002329",name:"BRBFD40030",machine:"BAM2",hasPouch:false},
+  {sap:"700002325",name:"BRBPW40030",machine:"BAM2",hasPouch:false},
+  {sap:"700002322",name:"FTBFD9960",machine:"BAM2",hasPouch:false},
+  {sap:"700002321",name:"FTPHB9960",machine:"BAM2",hasPouch:false},
+  {sap:"700002320",name:"FTPW9960",machine:"BAM2",hasPouch:false},
+  {sap:"700002327",name:"FTBFD9060",machine:"BAM2",hasPouch:false},
+  {sap:"700002326",name:"FTBPW9060",machine:"BAM2",hasPouch:false},
+  {sap:"700002323",name:"FTPW9060",machine:"BAM2",hasPouch:false},
+  {sap:"700002324",name:"FTBPWI9060",machine:"BAM2",hasPouch:false},
+  {sap:"700002330",name:"FTPHB9060",machine:"BAM2",hasPouch:false},
+  {sap:"700002108",name:"SSL10LET2G",machine:"HS01",hasPouch:true},
+  {sap:"700002108",name:"SSL10LET2G",machine:"HS03",hasPouch:true},
+  {sap:"700002108",name:"SSL10LET2G",machine:"HS04",hasPouch:true},
+  {sap:"700002108",name:"SSL10LET2G",machine:"HSMA",hasPouch:true},
+  {sap:"700002002",name:"HS10NB2G",machine:"HS01",hasPouch:true},
+  {sap:"700002002",name:"HS10NB2G",machine:"HS03",hasPouch:true},
+  {sap:"700002002",name:"HS10NB2G",machine:"HS04",hasPouch:true},
+  {sap:"700002002",name:"HS10NB2G",machine:"HSMA",hasPouch:true},
+  {sap:"700002213",name:"HS10NB",machine:"HS01",hasPouch:true},
+  {sap:"700002213",name:"HS10NB",machine:"HS03",hasPouch:true},
+  {sap:"700002213",name:"HS10NB",machine:"HS04",hasPouch:true},
+  {sap:"700002213",name:"HS10NB",machine:"HSMA",hasPouch:true},
+  {sap:"700002205",name:"HS10LET",machine:"HS01",hasPouch:true},
+  {sap:"700002205",name:"HS10LET",machine:"HS03",hasPouch:true},
+  {sap:"700002205",name:"HS10LET",machine:"HS04",hasPouch:true},
+  {sap:"700002205",name:"HS10LET",machine:"HSMA",hasPouch:true},
+  {sap:"700002338",name:"ESS10WSN",machine:"HS01",hasPouch:true},
+  {sap:"700002338",name:"ESS10WSN",machine:"HS03",hasPouch:true},
+  {sap:"700002338",name:"ESS10WSN",machine:"HS04",hasPouch:true},
+  {sap:"700002338",name:"ESS10WSN",machine:"HSMA",hasPouch:true},
+  {sap:"700002202",name:"SSL10BPW",machine:"HS01",hasPouch:true},
+  {sap:"700002202",name:"SSL10BPW",machine:"HS03",hasPouch:true},
+  {sap:"700002202",name:"SSL10BPW",machine:"HS04",hasPouch:true},
+  {sap:"700002202",name:"SSL10BPW",machine:"HSMA",hasPouch:true},
+  {sap:"700002212",name:"HS10BPW2G",machine:"HS01",hasPouch:true},
+  {sap:"700002212",name:"HS10BPW2G",machine:"HS03",hasPouch:true},
+  {sap:"700002212",name:"HS10BPW2G",machine:"HS04",hasPouch:true},
+  {sap:"700002212",name:"HS10BPW2G",machine:"HSMA",hasPouch:true},
+  {sap:"700002024",name:"BP133ES",machine:"HS01",hasPouch:true},
+  {sap:"700002024",name:"BP133ES",machine:"HS03",hasPouch:true},
+  {sap:"700002024",name:"BP133ES",machine:"HS04",hasPouch:true},
+  {sap:"700002024",name:"BP133ES",machine:"HSMA",hasPouch:true},
+  {sap:"700002337",name:"HES10WSN2G",machine:"HS01",hasPouch:true},
+  {sap:"700002337",name:"HES10WSN2G",machine:"HS03",hasPouch:true},
+  {sap:"700002337",name:"HES10WSN2G",machine:"HS04",hasPouch:true},
+  {sap:"700002337",name:"HES10WSN2G",machine:"HSMA",hasPouch:true},
+  {sap:"700002109",name:"SSL10LET",machine:"HS01",hasPouch:true},
+  {sap:"700002109",name:"SSL10LET",machine:"HS03",hasPouch:true},
+  {sap:"700002109",name:"SSL10LET",machine:"HS04",hasPouch:true},
+  {sap:"700002109",name:"SSL10LET",machine:"HS02",hasPouch:true},
+  {sap:"700002109",name:"SSL10LET",machine:"HSMA",hasPouch:true},
+  {sap:"700002201",name:"SSL100",machine:"HS01",hasPouch:true},
+  {sap:"700002201",name:"SSL100",machine:"HS03",hasPouch:true},
+  {sap:"700002201",name:"SSL100",machine:"HS04",hasPouch:true},
+  {sap:"700002201",name:"SSL100",machine:"HS02",hasPouch:true},
+  {sap:"700002201",name:"SSL100",machine:"HSMA",hasPouch:true},
+  {sap:"700002076",name:"SSL10DE",machine:"HS01",hasPouch:true},
+  {sap:"700002076",name:"SSL10DE",machine:"HS03",hasPouch:true},
+  {sap:"700002076",name:"SSL10DE",machine:"HS04",hasPouch:true},
+  {sap:"700002076",name:"SSL10DE",machine:"HS02",hasPouch:true},
+  {sap:"700002076",name:"SSL10DE",machine:"HSMA",hasPouch:true},
+  {sap:"700002025",name:"BP237SPG",machine:"HS01",hasPouch:true},
+  {sap:"700002025",name:"BP237SPG",machine:"HS03",hasPouch:true},
+  {sap:"700002025",name:"BP237SPG",machine:"HS04",hasPouch:true},
+  {sap:"700002025",name:"BP237SPG",machine:"HSMA",hasPouch:true},
+  {sap:"700002004",name:"SSL10NB2G",machine:"HS01",hasPouch:true},
+  {sap:"700002004",name:"SSL10NB2G",machine:"HS03",hasPouch:true},
+  {sap:"700002004",name:"SSL10NB2G",machine:"HS04",hasPouch:true},
+  {sap:"700002004",name:"SSL10NB2G",machine:"HSMA",hasPouch:true},
+  {sap:"700002003",name:"SSL10NB",machine:"HS01",hasPouch:true},
+  {sap:"700002003",name:"SSL10NB",machine:"HS03",hasPouch:true},
+  {sap:"700002003",name:"SSL10NB",machine:"HS04",hasPouch:true},
+  {sap:"700002003",name:"SSL10NB",machine:"BR01",hasPouch:true},
+  {sap:"700002003",name:"SSL10NB",machine:"HSMA",hasPouch:true},
+  {sap:"700002003",name:"SSL10NB",machine:"HS02",hasPouch:true},
+  {sap:"700002204",name:"HS10BPW",machine:"HS01",hasPouch:true},
+  {sap:"700002204",name:"HS10BPW",machine:"HS03",hasPouch:true},
+  {sap:"700002204",name:"HS10BPW",machine:"HS04",hasPouch:true},
+  {sap:"700002204",name:"HS10BPW",machine:"HSMA",hasPouch:true},
+  {sap:"700002107",name:"HS10DE2G",machine:"HS01",hasPouch:true},
+  {sap:"700002107",name:"HS10DE2G",machine:"HS03",hasPouch:true},
+  {sap:"700002107",name:"HS10DE2G",machine:"HS04",hasPouch:true},
+  {sap:"700002107",name:"HS10DE2G",machine:"HSMA",hasPouch:true},
+  {sap:"700002206",name:"HS10LET2G",machine:"HS01",hasPouch:true},
+  {sap:"700002206",name:"HS10LET2G",machine:"HS03",hasPouch:true},
+  {sap:"700002206",name:"HS10LET2G",machine:"HS04",hasPouch:true},
+  {sap:"700002206",name:"HS10LET2G",machine:"HSMA",hasPouch:true},
+  {sap:"700002042",name:"USDAKIT025",machine:"HS01",hasPouch:false},
+  {sap:"700002042",name:"USDAKIT025",machine:"HS03",hasPouch:false},
+  {sap:"700002042",name:"USDAKIT025",machine:"HS04",hasPouch:false},
+  {sap:"700002008",name:"BPPFV9BFD",machine:"MFT1",hasPouch:false},
+  {sap:"700002055",name:"BPPFV9BPW",machine:"MFT1",hasPouch:false},
+  {sap:"700002016",name:"BPPFV9MRD",machine:"MFT1",hasPouch:false},
+  {sap:"700002064",name:"BPPFV10DE",machine:"MFT1",hasPouch:false},
+  {sap:"700002047",name:"BPPFV9LB",machine:"MFT1",hasPouch:false},
+  {sap:"700002051",name:"BPPFV10BPW",machine:"MFT1",hasPouch:false},
+  {sap:"700002044",name:"BPPFV10LB",machine:"MFT1",hasPouch:false},
+  {sap:"700007680",name:"BPPFV10NB",machine:"MFT1",hasPouch:false},
+  {sap:"700002017",name:"3004",machine:"PA01",hasPouch:false},
+  {sap:"700002197",name:"30063M",machine:"PA01",hasPouch:false},
+  {sap:"700002027",name:"3007",machine:"PA01",hasPouch:false},
+  {sap:"700002018",name:"3008",machine:"PA01",hasPouch:false},
+  {sap:"700002041",name:"USDA100",machine:"PA01",hasPouch:false},
+  {sap:"700002045",name:"USDA050",machine:"PA01",hasPouch:false},
+  {sap:"700002015",name:"XSL008",machine:"PA01",hasPouch:false},
+  {sap:"N/A",name:"Welded Sponge Stick",machine:"HS02",hasPouch:false},
+  {sap:"N/A",name:"Welded Sponge Stick",machine:"Welders",hasPouch:false},
+  {sap:"700002262",name:"QDBFD225F",machine:"BR01",hasPouch:true},
+  {sap:"700002038",name:"QDBFD225",machine:"BR01",hasPouch:true},
+  {sap:"700002258",name:"QEBPW225F",machine:"BR01",hasPouch:true},
+  {sap:"700002013",name:"QEBPW225",machine:"BR01",hasPouch:true},
+  {sap:"700002065",name:"QETSB225",machine:"BR01",hasPouch:true},
+  {sap:"700002068",name:"QDBFD99",machine:"BR01",hasPouch:true},
+  {sap:"700002067",name:"QDBFD450",machine:"BR01",hasPouch:true},
+  {sap:"700002254",name:"QEBPWIS225",machine:"BR01",hasPouch:true},
+  {sap:"700002156",name:"QEBPWI225F",machine:"BR01",hasPouch:true},
+  {sap:"700002043",name:"USDA25BFD",machine:"HSMA",hasPouch:false},
+  {sap:"700002048",name:"USDA25BPW",machine:"BR01",hasPouch:false},
+  {sap:"700002106",name:"RS96010BPW",machine:"HSMA",hasPouch:false},
+  {sap:"700002106",name:"RS96010BPW",machine:"ESS1",hasPouch:false},
+  {sap:"700002014",name:"RS96010DE",machine:"HSMA",hasPouch:false},
+  {sap:"700002282",name:"100 Enviro",machine:"HSMA",hasPouch:false},
+  {sap:"700002014",name:"RS96010DE",machine:"ESS1",hasPouch:false},
+  {sap:"700002039",name:"RS96010LET",machine:"HSMA",hasPouch:false},
+  {sap:"700002039",name:"RS96010LET",machine:"ESS1",hasPouch:false},
+  {sap:"700002040",name:"RS96010NB",machine:"HSMA",hasPouch:false},
+  {sap:"700002040",name:"RS96010NB",machine:"ESS1",hasPouch:false},
+  {sap:"700002009",name:"RS9601LET",machine:"HSMA",hasPouch:false},
+  {sap:"700002009",name:"RS9601LET",machine:"ESS1",hasPouch:false},
+  {sap:"700002010",name:"RS9604LET",machine:"HSMA",hasPouch:false},
+  {sap:"700002282",name:"100 Enviro",machine:"BR01",hasPouch:false},
+  {sap:"700002282",name:"100 Enviro",machine:"ESS1",hasPouch:false},
+  {sap:"700002010",name:"RS9604LET",machine:"ESS1",hasPouch:false},
+  {sap:"700002011",name:"RS9604NB",machine:"HSMA",hasPouch:false},
+  {sap:"700002011",name:"RS9604NB",machine:"ESS1",hasPouch:false},
+  {sap:"700002012",name:"RS9605LET",machine:"HSMA",hasPouch:false},
+  {sap:"700002012",name:"RS9605LET",machine:"ESS1",hasPouch:false},
+];
+
+const SAP_SHELF_LIFE={
+  "700002322":24,"700002321":24,"700002320":24,"700002327":24,
+  "700002326":24,"700002323":24,"700002324":24,"700002330":24,
+  "700002329":12,"700002325":12,"700002108":12,"700002002":12,
+  "700002213":12,"700002205":12,"700002338":15,"700002202":12,
+  "700002212":12,"700002024":60,"700002337":15,"700002109":12,
+  "700002201":60,"700002076":12,"700002025":12,"700002004":12,
+  "700002003":12,"700002204":12,"700002107":12,"700002206":12,
+  "700002042":0,"700002008":24,"700002055":24,"700002016":24,
+  "700002064":24,"700002047":24,"700002051":24,"700002044":24,
+  "700007680":24,"700002262":24,"700002038":24,"700002258":24,
+  "700002013":24,"700002065":24,"700002068":24,"700002067":24,
+  "700002254":24,"700002156":12,"700002043":12,"700002048":12,
+  "700002106":18,"700002282":18,"700002014":18,"700002039":18,
+  "700002040":18,"700002009":12,"700002010":12,"700002011":12,
+  "700002012":12
+};
+
+const ALL_MACHINES=[...new Set(LABEL_DB.map(r=>r.machine))].sort();
+let pouchEnabled=false;
+let selectedProduct=null;
+
+const sel=document.getElementById('machineSelect');
+ALL_MACHINES.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o);});
+
+sel.addEventListener('change',()=>{
+  const machine=sel.value;
+  const productSel=document.getElementById('productSelect');
+  const productBar=document.getElementById('product-bar');
+  const infoBar=document.getElementById('product-info-bar');
+  productSel.innerHTML='<option value="">— Select product —</option>';
+  selectedProduct=null;
+  infoBar.style.display='none';
+  resetFields();
+  if(!machine){productBar.style.display='none';return;}
+  const rows=LABEL_DB.filter(r=>r.machine===machine);
+  rows.forEach(r=>{const o=document.createElement('option');o.value=r.sap+'|'+r.name;o.textContent=r.name+(r.sap!=='N/A'?'  ('+r.sap+')':'');productSel.appendChild(o);});
+  productBar.style.display='flex';
+});
+
+document.getElementById('productSelect').addEventListener('change',function(){
+  const val=this.value;
+  const infoBar=document.getElementById('product-info-bar');
+  if(!val){selectedProduct=null;infoBar.style.display='none';resetFields();return;}
+  const[sap,name]=val.split('|');
+  selectedProduct=LABEL_DB.find(r=>r.sap===sap&&r.name===name&&r.machine===sel.value);
+  const shelfMo=SAP_SHELF_LIFE[sap];
+  document.getElementById('info-sap').textContent=sap;
+  document.getElementById('info-shelf').textContent=shelfMo!=null?shelfMo+' months':'N/A';
+  document.getElementById('info-labels').textContent=selectedProduct?(selectedProduct.hasPouch?'Case + Pouch':'Case only'):'—';
+  document.getElementById('info-pouch-flag').textContent=selectedProduct&&selectedProduct.hasPouch?'YES ✓':'NO';
+  infoBar.style.display='flex';
+  if(selectedProduct&&selectedProduct.hasPouch){pouchEnabled=true;document.getElementById('pouchToggle').classList.add('on');document.getElementById('pouch-fields').style.display='block';}
+  else{pouchEnabled=false;document.getElementById('pouchToggle').classList.remove('on');document.getElementById('pouch-fields').style.display='none';}
+  updateBadge('pouch',pouchEnabled?'PENDING':'SKIPPED');
+  resetFields();
+  evaluate();
+});
+
+function togglePouch(){
+  pouchEnabled=!pouchEnabled;
+  document.getElementById('pouchToggle').classList.toggle('on',pouchEnabled);
+  document.getElementById('pouch-fields').style.display=pouchEnabled?'block':'none';
+  updateBadge('pouch',pouchEnabled?'PENDING':'SKIPPED');
+  clearPouchFields();evaluate();
+}
+
+function clearPouchFields(){
+  ['pouch-web','pouch-unique'].forEach(id=>{const el=document.getElementById(id);el.value='';el.className='';});
+  setStatus('pouch-web','');setStatus('pouch-unique','');
+  document.getElementById('pouch-parsed').innerHTML='<span style="color:var(--muted);font-family:var(--mono);font-size:11px">parsed data will appear here after scan</span>';
+}
+
+function parseQR(raw){
+  const result={};
+  if(!raw)return result;
+  const inner=raw.match(/\{\{([\s\S]*?)\}\}/);
+  const src=inner?inner[1]:raw;
+  src.split(';').forEach(pair=>{const[k,...v]=pair.split('=');if(k)result[k.trim()]=v.join('=').trim();});
+  return result;
+}
+
+function normaliseDate(d){
+  if(!d)return'';
+  if(/^\d{4}-\d{2}-\d{2}$/.test(d.trim()))return d.trim();
+  const m=d.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(m)return`${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
+  return d.trim().toLowerCase();
+}
+
+function mfgDateFromLot(lot){
+  if(!lot)return null;
+  const m=lot.match(/^[A-Za-z]+(\d{2})(\d{2})(\d{2})/);
+  if(!m)return null;
+  const mm=m[1],dd=m[2],yy=m[3];
+  const month=parseInt(mm,10),day=parseInt(dd,10);
+  if(month<1||month>12||day<1||day>31)return null;
+  return`${2000+parseInt(yy,10)}-${mm}-${dd}`;
+}
+
+function disposalDateFromExp(expISO){
+  if(!expISO||!/^\d{4}-\d{2}-\d{2}$/.test(expISO))return null;
+  const[y,mo,d]=expISO.split('-').map(Number);
+  let nm=mo+6,ny=y;
+  if(nm>12){nm-=12;ny++;}
+  return`${ny}-${String(nm).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+
+function monthsBetween(a,b){
+  if(!a||!b)return null;
+  const da=new Date(a),db=new Date(b);
+  if(isNaN(da)||isNaN(db))return null;
+  return(db.getFullYear()-da.getFullYear())*12+(db.getMonth()-da.getMonth());
+}
+
+function isExactShelfLife(mfg,exp,mo){
+  if(!mfg||!exp||mo===null)return false;
+  const a=new Date(mfg),b=new Date(exp);
+  if(isNaN(a)||isNaN(b))return false;
+  return monthsBetween(mfg,exp)===mo&&a.getUTCDate()===b.getUTCDate();
+}
+
+function setStatus(fid,state){
+  const el=document.getElementById('st-'+fid);
+  if(!el)return;
+  el.textContent=state==='pass'?'✓':state==='fail'?'✗':'○';
+  el.style.color=state==='pass'?'var(--pass)':state==='fail'?'var(--fail)':'var(--muted)';
+}
+
+function markInput(id,state){
+  const el=document.getElementById(id);
+  if(!el)return;
+  el.classList.remove('pass','fail','warn');
+  if(state)el.classList.add(state);
+}
+
+function updateBadge(section,text,state){
+  const el=document.getElementById('badge-'+section);
+  if(!el)return;
+  el.textContent=text||'PENDING';
+  el.className='section-badge';
+  if(state)el.classList.add(state);
+}
+
+function renderChips(cid,parsed,lotRef,expRef){
+  const el=document.getElementById(cid);
+  if(!parsed||!Object.keys(parsed).length){el.innerHTML='<span style="color:var(--muted);font-family:var(--mono);font-size:11px">parsed data will appear here after scan</span>';return;}
+  el.innerHTML=Object.entries(parsed).map(([k,v])=>{
+    let cls='';
+    if(k==='lot'&&lotRef)cls=(v===lotRef)?'highlight-lot':'mismatch';
+    else if(k==='expire'&&expRef)cls=(normaliseDate(v)===normaliseDate(expRef))?'highlight-exp':'mismatch';
+    return`<span class="chip ${cls}"><span class="chip-key">${k}=</span><span class="chip-val">${v}</span></span>`;
+  }).join('');
+}
+
+function evaluate(){
+  let allPass=true;
+  const lot=document.getElementById('br-lot').value.trim();
+  const mfg=document.getElementById('br-mfg').value.trim();
+  const exp=document.getElementById('br-exp').value.trim();
+  const caseWeb=document.getElementById('case-web').value.trim();
+  const caseUnique=document.getElementById('case-unique').value.trim();
+  const pouchWeb=document.getElementById('pouch-web').value.trim();
+  const pouchUnique=document.getElementById('pouch-unique').value.trim();
+
+  // Batch record
+  let batchOk=true;
+  const lotMfgDate=mfgDateFromLot(lot);
+  const lotHint=document.getElementById('lot-decoded');
+  if(lot&&lotMfgDate){lotHint.style.display='block';document.getElementById('lot-decoded-date').textContent=lotMfgDate;}
+  else{lotHint.style.display='none';}
+
+  if(lot){const ok=lotMfgDate!==null;markInput('br-lot',ok?'pass':'fail');setStatus('br-lot',ok?'pass':'fail');if(!ok)batchOk=false;}
+  else{markInput('br-lot','');setStatus('br-lot','');}
+
+  if(mfg){
+    const nm=normaliseDate(mfg);const vd=/^\d{4}-\d{2}-\d{2}$/.test(nm);
+    const ok=vd&&(lotMfgDate?nm===lotMfgDate:true);
+    markInput('br-mfg',ok?'pass':'fail');setStatus('br-mfg',ok?'pass':'fail');if(!ok)batchOk=false;
+  }else{markInput('br-mfg','');setStatus('br-mfg','');}
+
+  if(exp){
+    const ne=normaliseDate(exp);const vd=/^\d{4}-\d{2}-\d{2}$/.test(ne);
+    markInput('br-exp',vd?'pass':'fail');setStatus('br-exp',vd?'pass':'fail');if(!vd)batchOk=false;
+  }else{markInput('br-exp','');setStatus('br-exp','');}
+
+  const sapNum=selectedProduct&&selectedProduct.sap!=='N/A'?selectedProduct.sap:null;
+  const expectedMonths=sapNum?(SAP_SHELF_LIFE[sapNum]??null):null;
+  const shelfRow=document.getElementById('shelf-life-row');
+  const shelfNoProd=document.getElementById('shelf-no-product');
+
+  if(mfg&&exp){
+    const nm=normaliseDate(mfg),ne=normaliseDate(exp);
+    const computed=monthsBetween(nm,ne);
+    if(expectedMonths!==null){
+      shelfRow.style.display='block';shelfNoProd.style.display='none';
+      const ok=isExactShelfLife(nm,ne,expectedMonths);
+      document.getElementById('shelf-computed').textContent=computed!==null?`${computed} months`:'invalid dates';
+      document.getElementById('shelf-computed').style.color=ok?'var(--pass)':'var(--fail)';
+      document.getElementById('shelf-expected').textContent=`${expectedMonths} months`;
+      const ve=document.getElementById('shelf-verdict');
+      ve.textContent=ok?'✓ CORRECT':'✗ MISMATCH';
+      ve.style.background=ok?'rgba(0,230,118,.12)':'rgba(255,23,68,.12)';
+      ve.style.color=ok?'var(--pass)':'var(--fail)';
+      if(!ok)batchOk=false;
+    }else{shelfRow.style.display='none';shelfNoProd.style.display=(!selectedProduct)?'block':'none';}
+  }else{shelfRow.style.display='none';shelfNoProd.style.display='none';}
+
+  const batchFilled=lot&&mfg&&exp;
+  updateBadge('batch',batchFilled?(batchOk?'PASS':'FAIL'):'PENDING',batchFilled?(batchOk?'pass':'fail'):null);
+
+  // Case label
+  let caseOk=true;
+  if(caseWeb){const ok=caseWeb===EXPECTED_WEBSITE_QR;markInput('case-web',ok?'pass':'fail');setStatus('case-web',ok?'pass':'fail');if(!ok)caseOk=false;}
+  else{markInput('case-web','');setStatus('case-web','');}
+  if(caseUnique){
+    const parsed=parseQR(caseUnique);renderChips('case-parsed',parsed,lot||null,exp||null);
+    let ok=true;
+    if(selectedProduct&&selectedProduct.sap!=='N/A'){if(parsed.item===undefined||parsed.item!==selectedProduct.sap)ok=false;}
+    if(lot){if(parsed.lot===undefined||parsed.lot!==lot)ok=false;}
+    if(exp){if(parsed.expire===undefined||normaliseDate(parsed.expire)!==normaliseDate(exp))ok=false;}
+    markInput('case-unique',ok?'pass':'fail');setStatus('case-unique',ok?'pass':'fail');if(!ok)caseOk=false;
+  }else{renderChips('case-parsed',null);markInput('case-unique','');setStatus('case-unique','');}
+  const caseFilled=caseWeb&&caseUnique;
+  updateBadge('case',caseFilled?(caseOk?'PASS':'FAIL'):'PENDING',caseFilled?(caseOk?'pass':'fail'):null);
+
+  // Pouch label
+  let pouchOk=true;
+  if(pouchEnabled){
+    if(pouchWeb){const ok=pouchWeb===EXPECTED_WEBSITE_QR;markInput('pouch-web',ok?'pass':'fail');setStatus('pouch-web',ok?'pass':'fail');if(!ok)pouchOk=false;}
+    else{markInput('pouch-web','');setStatus('pouch-web','');}
+    if(pouchUnique){
+      const parsed=parseQR(pouchUnique);renderChips('pouch-parsed',parsed,lot||null,exp||null);
+      let ok=true;
+      if(selectedProduct&&selectedProduct.sap!=='N/A'){if(parsed.item===undefined||parsed.item!==selectedProduct.sap)ok=false;}
+      if(lot){if(parsed.lot===undefined||parsed.lot!==lot)ok=false;}
+      if(exp){if(parsed.expire===undefined||normaliseDate(parsed.expire)!==normaliseDate(exp))ok=false;}
+      markInput('pouch-unique',ok?'pass':'fail');setStatus('pouch-unique',ok?'pass':'fail');if(!ok)pouchOk=false;
+    }else{renderChips('pouch-parsed',null);markInput('pouch-unique','');setStatus('pouch-unique','');}
+    const pf=pouchWeb&&pouchUnique;
+    updateBadge('pouch',pf?(pouchOk?'PASS':'FAIL'):'PENDING',pf?(pouchOk?'pass':'fail'):null);
+  }
+
+  // ── RETAIN LABEL ──
+  const retName=document.getElementById('ret-name').value.trim();
+  const retSap=document.getElementById('ret-sap').value.trim();
+  const retLot=document.getElementById('ret-lot').value.trim();
+  const retExp=document.getElementById('ret-exp').value.trim();
+  const retDisposal=document.getElementById('ret-disposal').value.trim();
+
+  // Show/hide expected-value hints
+  const normExpForRetain=exp?normaliseDate(exp):null;
+  const expectedDisposal=normExpForRetain?disposalDateFromExp(normExpForRetain):null;
+
+  if(selectedProduct){
+    document.getElementById('ret-name-hint').style.display='block';
+    document.getElementById('ret-name-expected').textContent=selectedProduct.name;
+    document.getElementById('ret-sap-hint').style.display=selectedProduct.sap!=='N/A'?'block':'none';
+    document.getElementById('ret-sap-expected').textContent=selectedProduct.sap;
+  }else{
+    document.getElementById('ret-name-hint').style.display='none';
+    document.getElementById('ret-sap-hint').style.display='none';
+  }
+  if(lot){document.getElementById('ret-lot-hint').style.display='block';document.getElementById('ret-lot-expected').textContent=lot;}
+  else{document.getElementById('ret-lot-hint').style.display='none';}
+  if(normExpForRetain){document.getElementById('ret-exp-hint').style.display='block';document.getElementById('ret-exp-expected').textContent=normExpForRetain;}
+  else{document.getElementById('ret-exp-hint').style.display='none';}
+  if(expectedDisposal){document.getElementById('ret-disposal-hint-row').style.display='block';document.getElementById('ret-disposal-expected').textContent=expectedDisposal;}
+  else{document.getElementById('ret-disposal-hint-row').style.display='none';}
+
+  let retainOk=true;
+
+  // Product name
+  if(retName){
+    const ok=selectedProduct?retName===selectedProduct.name:true;
+    markInput('ret-name',ok?'pass':'fail');setStatus('ret-name',ok?'pass':'fail');if(!ok)retainOk=false;
+  }else{markInput('ret-name','');setStatus('ret-name','');}
+
+  // SAP
+  if(retSap){
+    const ok=selectedProduct&&selectedProduct.sap!=='N/A'?retSap===selectedProduct.sap:true;
+    markInput('ret-sap',ok?'pass':'fail');setStatus('ret-sap',ok?'pass':'fail');if(!ok)retainOk=false;
+  }else{markInput('ret-sap','');setStatus('ret-sap','');}
+
+  // Lot
+  if(retLot){
+    const ok=lot?retLot===lot:true;
+    markInput('ret-lot',ok?'pass':'fail');setStatus('ret-lot',ok?'pass':'fail');if(!ok)retainOk=false;
+  }else{markInput('ret-lot','');setStatus('ret-lot','');}
+
+  // Expiration
+  if(retExp){
+    const nr=normaliseDate(retExp);const vd=/^\d{4}-\d{2}-\d{2}$/.test(nr);
+    const ok=vd&&(normExpForRetain?nr===normExpForRetain:true);
+    markInput('ret-exp',ok?'pass':'fail');setStatus('ret-exp',ok?'pass':'fail');if(!ok)retainOk=false;
+  }else{markInput('ret-exp','');setStatus('ret-exp','');}
+
+  // Disposal
+  if(retDisposal){
+    const nd=normaliseDate(retDisposal);const vd=/^\d{4}-\d{2}-\d{2}$/.test(nd);
+    const ok=vd&&(expectedDisposal?nd===expectedDisposal:true);
+    markInput('ret-disposal',ok?'pass':'fail');setStatus('ret-disposal',ok?'pass':'fail');if(!ok)retainOk=false;
+  }else{markInput('ret-disposal','');setStatus('ret-disposal','');}
+
+  const retainFilled=retName&&retSap&&retLot&&retExp&&retDisposal;
+  updateBadge('retain',retainFilled?(retainOk?'PASS':'FAIL'):'PENDING',retainFilled?(retainOk?'pass':'fail'):null);
+
+  // ── Summary ──
+  const anyFilled=batchFilled||caseFilled||(pouchEnabled&&pouchWeb&&pouchUnique)||retainFilled;
+  const summaryEl=document.getElementById('summary');
+  if(!anyFilled){summaryEl.classList.remove('visible');return;}
+  summaryEl.classList.add('visible');
+
+  const list=document.getElementById('result-list');
+  const verdict=document.getElementById('final-verdict');
+  list.innerHTML='';
+
+  const addRow=(label,state,note)=>{
+    const row=document.createElement('div');
+    row.className=`result-row ${state}`;
+    row.innerHTML=`<span class="dot"></span><span>${label}${note?' — '+note:''}</span>`;
+    list.appendChild(row);
+    if(state==='err')allPass=false;
+  };
+
+  if(batchFilled){
+    const lm=mfgDateFromLot(lot);
+    addRow('Batch Record Lot#',lm?'ok':'err',lm?`${lot} → mfg ${lm}`:`${lot} — cannot parse date from lot`);
+    const nm=normaliseDate(mfg);const vm=/^\d{4}-\d{2}-\d{2}$/.test(nm);const mm=vm&&(lm?nm===lm:true);
+    addRow('Batch Record Mfg Date',mm?'ok':'err',!vm?'unrecognised date format':mm?`${nm} matches lot`:`${nm} does not match lot-encoded date ${lm}`);
+    const ne=normaliseDate(exp);const ve=/^\d{4}-\d{2}-\d{2}$/.test(ne);
+    addRow('Batch Record Exp Date',ve?'ok':'err',ve?ne:'unrecognised date format');
+    if(expectedMonths!==null){
+      const comp=monthsBetween(normaliseDate(mfg),normaliseDate(exp));
+      const sok=isExactShelfLife(normaliseDate(mfg),normaliseDate(exp),expectedMonths);
+      const md=new Date(normaliseDate(mfg)).getUTCDate(),ed=new Date(normaliseDate(exp)).getUTCDate();
+      const dn=md!==ed?` (day mismatch: mfg day ${md}, exp day ${ed})`:'';
+      addRow(`Shelf Life (${comp} mo vs expected ${expectedMonths} mo)`,sok?'ok':'err',sok?'correct duration, day matches':`off by ${Math.abs(comp-expectedMonths)} month(s)${dn}`);
+    }
+  }
+  if(caseFilled){
+    addRow('Case Label — Website QR',caseWeb===EXPECTED_WEBSITE_QR?'ok':'err',caseWeb===EXPECTED_WEBSITE_QR?'URL matches':`got "${caseWeb}"`);
+    const cu=parseQR(caseUnique);
+    if(selectedProduct&&selectedProduct.sap!=='N/A'){if(cu.item===undefined)addRow('Case Label — Item# in QR','err','field "item" missing');else addRow('Case Label — Item# in QR',cu.item===selectedProduct.sap?'ok':'err',cu.item===selectedProduct.sap?`item=${cu.item}`:`got "${cu.item}", expected "${selectedProduct.sap}"`);}
+    else addRow('Case Label — Item# in QR','skip','no product selected');
+    if(lot){if(cu.lot===undefined)addRow('Case Label — Lot# in QR','err','field "lot" missing');else addRow('Case Label — Lot# in QR',cu.lot===lot?'ok':'err',cu.lot===lot?`lot=${cu.lot}`:`got "${cu.lot}", expected "${lot}"`);}
+    else addRow('Case Label — Lot# in QR','ok',cu.lot?`lot=${cu.lot}`:'present');
+    if(exp){if(cu.expire===undefined)addRow('Case Label — Expire in QR','err','field "expire" missing');else addRow('Case Label — Expire in QR',normaliseDate(cu.expire)===normaliseDate(exp)?'ok':'err',normaliseDate(cu.expire)===normaliseDate(exp)?`expire=${cu.expire}`:`got "${cu.expire}", expected "${exp}"`);}
+    else addRow('Case Label — Expire in QR','ok',cu.expire?`expire=${cu.expire}`:'present');
+  }
+  if(pouchEnabled&&pouchWeb&&pouchUnique){
+    addRow('Pouch Label — Website QR',pouchWeb===EXPECTED_WEBSITE_QR?'ok':'err',pouchWeb===EXPECTED_WEBSITE_QR?'URL matches':`got "${pouchWeb}"`);
+    const pu=parseQR(pouchUnique);
+    if(selectedProduct&&selectedProduct.sap!=='N/A'){if(pu.item===undefined)addRow('Pouch Label — Item# in QR','err','field "item" missing');else addRow('Pouch Label — Item# in QR',pu.item===selectedProduct.sap?'ok':'err',pu.item===selectedProduct.sap?`item=${pu.item}`:`got "${pu.item}", expected "${selectedProduct.sap}"`);}
+    else addRow('Pouch Label — Item# in QR','skip','no product selected');
+    if(lot){if(pu.lot===undefined)addRow('Pouch Label — Lot# in QR','err','field "lot" missing');else addRow('Pouch Label — Lot# in QR',pu.lot===lot?'ok':'err',pu.lot===lot?`lot=${pu.lot}`:`got "${pu.lot}", expected "${lot}"`);}
+    else addRow('Pouch Label — Lot# in QR','ok',pu.lot?`lot=${pu.lot}`:'present');
+    if(exp){if(pu.expire===undefined)addRow('Pouch Label — Expire in QR','err','field "expire" missing');else addRow('Pouch Label — Expire in QR',normaliseDate(pu.expire)===normaliseDate(exp)?'ok':'err',normaliseDate(pu.expire)===normaliseDate(exp)?`expire=${pu.expire}`:`got "${pu.expire}", expected "${exp}"`);}
+    else addRow('Pouch Label — Expire in QR','ok',pu.expire?`expire=${pu.expire}`:'present');
+  }else if(!pouchEnabled){addRow('Pouch Label','skip','not applicable for this product');}
+
+  // Retain label summary rows
+  if(retainFilled){
+    if(selectedProduct){
+      addRow('Retain Label — Product Name',retName===selectedProduct.name?'ok':'err',retName===selectedProduct.name?`"${retName}" matches`:`got "${retName}", expected "${selectedProduct.name}"`);
+      if(selectedProduct.sap!=='N/A')addRow('Retain Label — SAP Number',retSap===selectedProduct.sap?'ok':'err',retSap===selectedProduct.sap?`${retSap} matches`:`got "${retSap}", expected "${selectedProduct.sap}"`);
+    }else{addRow('Retain Label — Product Name','skip','no product selected to cross-check');addRow('Retain Label — SAP Number','skip','no product selected to cross-check');}
+    if(lot)addRow('Retain Label — Lot Number',retLot===lot?'ok':'err',retLot===lot?`${retLot} matches batch`:`got "${retLot}", expected "${lot}"`);
+    else addRow('Retain Label — Lot Number','ok',`${retLot} (batch lot not yet scanned)`);
+    if(normExpForRetain){
+      const nr=normaliseDate(retExp);
+      addRow('Retain Label — Expiration Date',nr===normExpForRetain?'ok':'err',nr===normExpForRetain?`${nr} matches batch`:`got "${nr}", expected "${normExpForRetain}"`);
+    }else addRow('Retain Label — Expiration Date','ok',`${normaliseDate(retExp)} (batch exp not yet scanned)`);
+    if(expectedDisposal){
+      const nd=normaliseDate(retDisposal);
+      addRow('Retain Label — Disposal Date',nd===expectedDisposal?'ok':'err',nd===expectedDisposal?`${nd} correct (exp + 6 mo)`:`got "${nd}", expected "${expectedDisposal}"`);
+    }else addRow('Retain Label — Disposal Date','ok',`${normaliseDate(retDisposal)} (exp needed to verify)`);
+  }
+
+  verdict.textContent=allPass?'✓ ALL CHECKS PASSED':'✗ VERIFICATION FAILED — see above';
+  verdict.className='final-verdict '+(allPass?'pass':'fail');
+}
+
+['br-lot','br-mfg','br-exp','case-web','case-unique','pouch-web','pouch-unique','ret-name','ret-sap','ret-lot','ret-exp','ret-disposal'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el)el.addEventListener('input',evaluate);
+});
+
+function resetFields(){
+  ['br-lot','br-mfg','br-exp','case-web','case-unique','pouch-web','pouch-unique','ret-name','ret-sap','ret-lot','ret-exp','ret-disposal'].forEach(id=>{
+    const el=document.getElementById(id);if(el){el.value='';el.className='';}
+  });
+  ['br-lot','br-mfg','br-exp','case-web','case-unique','pouch-web','pouch-unique','ret-name','ret-sap','ret-lot','ret-exp','ret-disposal'].forEach(id=>setStatus(id,''));
+  ['batch','case','retain'].forEach(s=>updateBadge(s,'PENDING'));
+  updateBadge('pouch',pouchEnabled?'PENDING':'SKIPPED');
+  ['case-parsed','pouch-parsed'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<span style="color:var(--muted);font-family:var(--mono);font-size:11px">parsed data will appear here after scan</span>';});
+  document.getElementById('shelf-life-row').style.display='none';
+  document.getElementById('shelf-no-product').style.display='none';
+  document.getElementById('lot-decoded').style.display='none';
+  document.getElementById('summary').classList.remove('visible');
+  ['ret-name-hint','ret-sap-hint','ret-lot-hint','ret-exp-hint','ret-disposal-hint-row'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+}
+
+function resetAll(){
+  sel.value='';
+  document.getElementById('productSelect').innerHTML='<option value="">— Select product —</option>';
+  document.getElementById('product-bar').style.display='none';
+  document.getElementById('product-info-bar').style.display='none';
+  selectedProduct=null;pouchEnabled=false;
+  document.getElementById('pouchToggle').classList.remove('on');
+  document.getElementById('pouch-fields').style.display='none';
+  resetFields();
+}
+</script>
